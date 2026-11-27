@@ -1,5 +1,5 @@
-import bcrypt from "bcryptjs";
-import { PrismaClient, Role } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
+import { seedDemoData } from "../src/lib/demo-seed";
 
 try {
   process.loadEnvFile();
@@ -9,76 +9,17 @@ try {
 
 const prisma = new PrismaClient();
 
-const SEED_PASSWORDS = {
-  ADMIN: "Admin123!",
-  EXAMINER: "Examiner123!",
-  CANDIDATE: "Candidate123!",
-} as const;
-
 async function main() {
-  const [adminHash, examinerHash, candidateHash] = await Promise.all([
-    bcrypt.hash(SEED_PASSWORDS.ADMIN, 10),
-    bcrypt.hash(SEED_PASSWORDS.EXAMINER, 10),
-    bcrypt.hash(SEED_PASSWORDS.CANDIDATE, 10),
-  ]);
-
-  const users: Array<{
-    name: string;
-    email: string;
-    role: Role;
-    passwordHash: string;
-  }> = [
-    {
-      name: "System Administrator",
-      email: "admin@proctoros.local",
-      role: Role.ADMIN,
-      passwordHash: adminHash,
-    },
-    {
-      name: "Dr. Nadia Hassan",
-      email: "examiner1@proctoros.local",
-      role: Role.EXAMINER,
-      passwordHash: examinerHash,
-    },
-    {
-      name: "Prof. Tariq Javed",
-      email: "examiner2@proctoros.local",
-      role: Role.EXAMINER,
-      passwordHash: examinerHash,
-    },
-    ...Array.from({ length: 10 }, (_, idx) => {
-      const n = idx + 1;
-      return {
-        name: `Candidate ${String(n).padStart(2, "0")}`,
-        email: `candidate${n}@proctoros.local`,
-        role: Role.CANDIDATE,
-        passwordHash: candidateHash,
-      };
-    }),
-  ];
-
-  for (const user of users) {
-    await prisma.user.upsert({
-      where: { email: user.email },
-      update: {
-        name: user.name,
-        role: user.role,
-        passwordHash: user.passwordHash,
-        isActive: true,
-      },
-      create: {
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        passwordHash: user.passwordHash,
-        isActive: true,
-      },
-    });
+  const result = await seedDemoData(prisma, { reset: false });
+  if (result.skippedContent) {
+    console.log(
+      `Verified ${result.usersCount} users; demo exams already seeded (run \`npm run db:reset-demo\` for a full reset).`,
+    );
+  } else {
+    console.log(
+      `Seeded ${result.usersCount} users, ${result.questionsCount} questions across 4 topics, and ${result.examsCount} demo exams.`,
+    );
   }
-
-  console.log(
-    `Seeded ${users.length} users (1 ADMIN, 2 EXAMINER, 10 CANDIDATE).`,
-  );
 }
 
 main()

@@ -606,13 +606,13 @@ export function AttemptWorkspace({
 
       {/* Persistent Exam Top Bar */}
       <header className="sticky top-0 z-30 bg-surface border-b border-border-default">
-        <div className="mx-auto max-w-6xl px-4 sm:px-8 h-16 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
+        <div className="mx-auto max-w-6xl px-3 sm:px-8 h-16 flex items-center justify-between gap-2 sm:gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
             <span className="h-8 w-8 rounded-lg bg-pine text-white flex items-center justify-center shrink-0">
               <ShieldCheck className="h-4 w-4" aria-hidden="true" />
             </span>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-ink truncate">
+              <p className="text-xs sm:text-sm font-semibold text-ink truncate">
                 {initialPaper.attempt.examTitle}
               </p>
               <p className="hidden sm:block text-[11px] text-ink-muted">
@@ -622,7 +622,7 @@ export function AttemptWorkspace({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <div className="hidden md:block">
               <StatusPill state={syncState} />
             </div>
@@ -631,7 +631,7 @@ export function AttemptWorkspace({
             <div
               aria-label="Time remaining"
               className={cn(
-                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-mono text-sm font-semibold tabular-nums transition-colors duration-200",
+                "inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg border font-mono text-xs sm:text-sm font-semibold tabular-nums transition-colors duration-200",
                 isUrgent
                   ? "bg-terracotta text-white border-terracotta"
                   : isWarning
@@ -668,6 +668,7 @@ export function AttemptWorkspace({
             <Button
               variant="secondary"
               size="sm"
+              className="hidden sm:inline-flex"
               aria-label="Display preferences"
               onClick={() => setPrefsOpen(true)}
             >
@@ -697,11 +698,21 @@ export function AttemptWorkspace({
         </div>
 
         {/* Mobile sync status strip */}
-        <div className="md:hidden border-t border-border-default px-4 py-1.5 bg-canvas flex items-center justify-between">
+        <div className="md:hidden border-t border-border-default px-3 sm:px-4 py-1.5 bg-canvas flex items-center justify-between gap-2">
           <StatusPill state={syncState} />
-          <span className="font-mono text-xs text-ink-muted tabular-nums">
-            {answeredCount}/{questions.length} answered
-          </span>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setPrefsOpen(true)}
+              className="sm:hidden inline-flex items-center gap-1 text-[11px] font-medium text-ink-muted hover:text-ink"
+            >
+              <SlidersHorizontal className="h-3 w-3" aria-hidden="true" />
+              <span>Display</span>
+            </button>
+            <span className="font-mono text-xs text-ink-muted tabular-nums">
+              {answeredCount}/{questions.length} answered
+            </span>
+          </div>
         </div>
       </header>
 

@@ -10,6 +10,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "db:seed": "tsx prisma/seed.ts",
+    "db:reset-demo": "tsx scripts/reset-demo-data.ts",
     "integrity-check": "tsx scripts/integrity-check.ts",
     "test": "tsx --test tests/*.test.ts"
   },

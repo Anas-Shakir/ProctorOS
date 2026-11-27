@@ -41,7 +41,7 @@ export default function HomePage() {
             variant="pine"
             icon={<CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />}
           >
-            Stage 0 Frontend Foundation
+            Verifiable Examination &amp; Dispute Platform
           </Badge>
         </div>
 
@@ -56,8 +56,9 @@ export default function HomePage() {
           className="stagger-in mt-5 text-base sm:text-lg text-ink-muted leading-relaxed"
           style={{ "--stagger-index": 2 } as React.CSSProperties}
         >
-          Designed on calm warm paper with snapshot-frozen papers, resilient
-          offline autosave, and transparent dispute rulings.
+          Server-authoritative timing, snapshot-frozen papers, offline-resilient
+          autosave, SHA-256 hash-chained audit logs, and transparent question
+          rulings on calm warm paper.
         </p>
 
         <div
@@ -65,14 +66,14 @@ export default function HomePage() {
           style={{ "--stagger-index": 3 } as React.CSSProperties}
         >
           <Link
-            href="/design"
+            href="/login"
             className="pressable focus-ring inline-flex items-center gap-2 h-11 px-5 rounded-lg bg-pine text-white text-sm font-medium hover:bg-pine-hover"
           >
-            <span>Open Component &amp; Motion Preview</span>
+            <span>Launch Demo &amp; Sign In</span>
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
           <span className="text-xs font-mono text-ink-muted">
-            60/30/10 Warm Paper · Flat Surfaces · Zero Gradients
+            Admin · Examiner · Candidate workspaces · QR Verification
           </span>
         </div>
       </section>
