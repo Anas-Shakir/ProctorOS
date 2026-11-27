@@ -228,6 +228,13 @@ export async function autoGradeAttempt(
 
   let totalScore = 0;
   let hasPendingWritten = false;
+  const gradesToCreate: Array<{
+    attemptQuestionId: string;
+    score: number;
+    gradedBy: null;
+    rulingId: string | null;
+    reason: string;
+  }> = [];
 
   for (const aq of attempt.questions) {
     const existingLatestGrade = aq.grades[0];
@@ -261,16 +268,18 @@ export async function autoGradeAttempt(
       continue;
     }
 
-    await tx.grade.create({
-      data: {
-        attemptQuestionId: aq.id,
-        score: result.score,
-        gradedBy: null,
-        rulingId: result.rulingId,
-        reason: result.reason,
-      },
+    gradesToCreate.push({
+      attemptQuestionId: aq.id,
+      score: result.score,
+      gradedBy: null,
+      rulingId: result.rulingId,
+      reason: result.reason,
     });
     totalScore += result.score;
+  }
+
+  if (gradesToCreate.length > 0) {
+    await tx.grade.createMany({ data: gradesToCreate });
   }
 
   const roundedTotal = roundScore(totalScore);

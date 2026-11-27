@@ -85,7 +85,7 @@ export async function finalizeIfExpired(
         totalScore: true,
       },
     });
-  });
+  }, { maxWait: 15000, timeout: 30000 });
 }
 
 /**
@@ -237,7 +237,7 @@ export async function startOrResumeAttempt(params: {
           },
         },
       });
-    });
+    }, { maxWait: 15000, timeout: 30000 });
 
     return {
       attempt: {
@@ -547,5 +547,5 @@ export async function submitAttempt(attemptId: string) {
         submittedAt: existing.submittedAt?.toISOString() ?? null,
       },
     };
-  });
+  }, { maxWait: 15000, timeout: 30000 });
 }
