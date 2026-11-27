@@ -198,7 +198,12 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-5 lg:hidden">
+          <p className="mt-4 text-xs text-ink-muted leading-relaxed">
+            No public sign-up — accounts are provisioned by your institution
+            administrator or examiner roster import.
+          </p>
+
+          <div className="mt-4 lg:hidden">
             <a
               href="#demo-accounts"
               className="focus-ring inline-flex items-center gap-1.5 text-xs font-medium text-pine hover:underline"
