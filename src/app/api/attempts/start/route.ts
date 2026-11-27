@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { startCandidateAttempt } from "@/lib/candidate";
+import { startOrResumeAttempt } from "@/lib/attempts";
 import {
   handleApiError,
   HttpError,
@@ -19,7 +19,11 @@ export async function POST(request: Request) {
     }
 
     const { user } = await requireEnrollment(parsed.data.examId);
-    const result = await startCandidateAttempt(user.id, parsed.data.examId);
+    const result = await startOrResumeAttempt({
+      candidateId: user.id,
+      examId: parsed.data.examId,
+      isSandbox: false,
+    });
     return NextResponse.json(result);
   } catch (error) {
     return handleApiError(error);

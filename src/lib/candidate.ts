@@ -1,7 +1,6 @@
-import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { HttpError } from "@/lib/permissions";
 import { getExamStatus, type DerivedExamStatus } from "@/lib/time";
+export { startOrResumeAttempt } from "@/lib/attempts";
 
 export type CandidateAccessStatus =
   | "NOT_OPEN_YET"
@@ -115,106 +114,4 @@ export async function listCandidateExams(candidateId: string): Promise<{
     serverNow: serverNow.toISOString(),
     exams,
   };
-}
-
-/**
- * Server-side entry gate for `POST /api/attempts/start`.
- * Enforces PUBLISHED status and server-time exam window after enrollment check.
- * Stage 5 will layer AttemptQuestion snapshot creation into this transaction.
- */
-export async function startCandidateAttempt(
-  candidateId: string,
-  examId: string,
-) {
-  const serverNow = new Date();
-  const exam = await db.exam.findUnique({
-    where: { id: examId },
-    select: {
-      id: true,
-      status: true,
-      startTime: true,
-      endTime: true,
-      durationMin: true,
-    },
-  });
-
-  if (!exam || exam.status !== "PUBLISHED") {
-    throw new HttpError(403, "Exam is not available");
-  }
-
-  const derived = getExamStatus(exam, serverNow);
-  if (derived === "UPCOMING") {
-    throw new HttpError(409, "This exam has not opened yet");
-  }
-  if (derived === "COMPLETED") {
-    throw new HttpError(409, "This exam window has already closed");
-  }
-
-  const realKey = `${examId}:${candidateId}`;
-  const computedDeadline = new Date(
-    Math.min(
-      serverNow.getTime() + exam.durationMin * 60_000,
-      exam.endTime.getTime(),
-    ),
-  );
-
-  try {
-    const attempt = await db.$transaction(async (tx) => {
-      const existing = await tx.attempt.findUnique({ where: { realKey } });
-      if (existing) {
-        if (existing.status !== "IN_PROGRESS") {
-          throw new HttpError(409, "You have already completed this exam");
-        }
-        return existing;
-      }
-
-      return tx.attempt.create({
-        data: {
-          examId,
-          candidateId,
-          isSandbox: false,
-          realKey,
-          status: "IN_PROGRESS",
-          startedAt: serverNow,
-          deadlineAt: computedDeadline,
-        },
-      });
-    });
-
-    return {
-      attempt: {
-        id: attempt.id,
-        examId: attempt.examId,
-        status: attempt.status,
-        isSandbox: attempt.isSandbox,
-        startedAt: attempt.startedAt.toISOString(),
-        deadlineAt: attempt.deadlineAt.toISOString(),
-      },
-      serverNow: serverNow.toISOString(),
-    };
-  } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2002"
-    ) {
-      const existing = await db.attempt.findUniqueOrThrow({
-        where: { realKey },
-      });
-      if (existing.status !== "IN_PROGRESS") {
-        throw new HttpError(409, "You have already completed this exam");
-      }
-      return {
-        attempt: {
-          id: existing.id,
-          examId: existing.examId,
-          status: existing.status,
-          isSandbox: existing.isSandbox,
-          startedAt: existing.startedAt.toISOString(),
-          deadlineAt: existing.deadlineAt.toISOString(),
-        },
-        serverNow: serverNow.toISOString(),
-      };
-    }
-    throw error;
-  }
 }
