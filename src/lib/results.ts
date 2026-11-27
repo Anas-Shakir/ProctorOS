@@ -6,6 +6,7 @@ import {
   parseSnapshotOptions,
 } from "@/lib/grading";
 import { HttpError } from "@/lib/permissions";
+import { supersedeReportTokens } from "@/lib/verify";
 
 function roundScore(value: number): number {
   return Math.round(value * 100) / 100;
@@ -258,6 +259,8 @@ export async function saveManualGrade(params: {
         ...(pendingWritten === 0 ? { status: "GRADED" } : {}),
       },
     });
+
+    await supersedeReportTokens(tx, aq.attempt.id);
   });
 
   return getExaminerGradingAndResults(params.examId);

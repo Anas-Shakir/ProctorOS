@@ -5,6 +5,7 @@ import {
   Check,
   CheckCircle2,
   Clock,
+  Download,
   History,
 } from "lucide-react";
 import {
@@ -106,12 +107,23 @@ export default async function CandidateAttemptResultsPage({
                     </span>
                   </p>
                 </div>
-                <Badge
-                  variant="pine"
-                  icon={<CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />}
-                >
-                  {result.status}
-                </Badge>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Badge
+                    variant="pine"
+                    icon={
+                      <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                    }
+                  >
+                    {result.status}
+                  </Badge>
+                  <a
+                    href={`/api/attempts/${id}/report`}
+                    className="pressable focus-ring inline-flex items-center gap-2 h-9 px-3.5 rounded-lg bg-pine text-white text-xs font-medium hover:bg-pine-hover"
+                  >
+                    <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                    <span>Download Official PDF</span>
+                  </a>
+                </div>
               </CardContent>
             </Card>
 

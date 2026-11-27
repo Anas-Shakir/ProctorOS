@@ -7,6 +7,7 @@ import {
   ArrowRight,
   CheckCircle2,
   Clock,
+  Download,
   Send,
 } from "lucide-react";
 import {
@@ -110,19 +111,30 @@ export function ResultsTab({
           )}
         </div>
 
-        {!resultsPublished && examStatus === "PUBLISHED" && (
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => {
-              setOverrideConfirm(false);
-              setPublishOpen(true);
-            }}
-          >
-            <Send className="h-3.5 w-3.5" aria-hidden="true" />
-            <span>Publish Results</span>
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {results.length > 0 && (
+            <a
+              href={`/api/examiner/exams/${examId}/summary-pdf`}
+              className="pressable focus-ring inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-border-default bg-surface text-xs font-medium text-ink hover:border-border-strong"
+            >
+              <Download className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>Summary PDF</span>
+            </a>
+          )}
+          {!resultsPublished && examStatus === "PUBLISHED" && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                setOverrideConfirm(false);
+                setPublishOpen(true);
+              }}
+            >
+              <Send className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>Publish Results</span>
+            </Button>
+          )}
+        </div>
       </div>
 
       <Table>
@@ -177,13 +189,24 @@ export function ResultsTab({
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Link
-                    href={`/examiner/exams/${examId}/attempts/${row.attemptId}`}
-                    className="pressable focus-ring inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-border-default bg-surface text-xs font-medium text-ink hover:border-border-strong"
-                  >
-                    <span>Review</span>
-                    <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-                  </Link>
+                  <div className="inline-flex items-center gap-2">
+                    {resultsPublished && (
+                      <a
+                        href={`/api/attempts/${row.attemptId}/report`}
+                        className="pressable focus-ring inline-flex items-center gap-1 h-8 px-2.5 rounded-md border border-border-default bg-surface text-xs font-medium text-ink hover:border-border-strong"
+                      >
+                        <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                        <span>PDF</span>
+                      </a>
+                    )}
+                    <Link
+                      href={`/examiner/exams/${examId}/attempts/${row.attemptId}`}
+                      className="pressable focus-ring inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-border-default bg-surface text-xs font-medium text-ink hover:border-border-strong"
+                    >
+                      <span>Review</span>
+                      <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                    </Link>
+                  </div>
                 </TableCell>
               </TableRow>
             ))

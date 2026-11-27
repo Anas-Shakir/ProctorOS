@@ -155,6 +155,39 @@ export async function requireAttemptOwner(attemptId: string) {
   return { user, attempt };
 }
 
+/**
+ * Require either the candidate who owns the attempt, the examiner who owns
+ * the parent exam, or an ADMIN. Used for PDF report downloads.
+ */
+export async function requireAttemptViewer(attemptId: string) {
+  const user = await requireRole(["CANDIDATE", "EXAMINER", "ADMIN"]);
+  const attempt = await db.attempt.findUnique({
+    where: { id: attemptId },
+    select: {
+      id: true,
+      examId: true,
+      candidateId: true,
+      isSandbox: true,
+      exam: { select: { ownerId: true } },
+    },
+  });
+
+  if (!attempt || attempt.isSandbox) {
+    throw new HttpError(404, "Attempt not found");
+  }
+
+  const isCandidateOwner = attempt.candidateId === user.id;
+  const isExamOwner =
+    user.role === "EXAMINER" && attempt.exam.ownerId === user.id;
+  const isAdmin = user.role === "ADMIN";
+
+  if (!isCandidateOwner && !isExamOwner && !isAdmin) {
+    throw new HttpError(403, "Insufficient permissions to view this report");
+  }
+
+  return { user, attempt };
+}
+
 /** Convert thrown HttpError / unexpected errors into clean JSON responses. */
 export function handleApiError(error: unknown) {
   if (error instanceof HttpError) {
