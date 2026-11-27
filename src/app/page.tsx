@@ -22,10 +22,10 @@ export default function HomePage() {
             UI Kit
           </Link>
           <Link
-            href="/design"
+            href="/login"
             className="pressable focus-ring inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-pine text-white text-sm font-medium hover:bg-pine-hover"
           >
-            <span>Explore Workspace</span>
+            <span>Sign In</span>
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
         </div>
