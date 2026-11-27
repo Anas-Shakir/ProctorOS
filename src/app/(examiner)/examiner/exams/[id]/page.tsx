@@ -3,6 +3,7 @@ import { getActiveSessionUser, HttpError, requireExamOwner } from "@/lib/permiss
 import { getRoleHome } from "@/lib/session";
 import { getExamWorkspace } from "@/lib/exams";
 import { listQuestions } from "@/lib/questions";
+import { listExamEnrollments } from "@/lib/enrollments";
 import { PageShell } from "@/components/ui";
 import { RoleHeaderActions } from "@/components/auth/role-header-actions";
 import { ExamWorkspace } from "@/components/examiner/exam-workspace";
@@ -31,9 +32,10 @@ export default async function ExaminerExamWorkspacePage({
     redirect("/examiner");
   }
 
-  const [workspace, bank] = await Promise.all([
+  const [workspace, bank, enrollments] = await Promise.all([
     getExamWorkspace(id),
     listQuestions(user),
+    listExamEnrollments(id),
   ]);
 
   const serializedExam = {
@@ -95,6 +97,8 @@ export default async function ExaminerExamWorkspacePage({
         initialExam={serializedExam}
         initialChecklist={workspace.checklist}
         bankQuestions={serializedBank}
+        initialEnrolled={enrollments.enrolled}
+        initialAvailableCandidates={enrollments.availableCandidates}
       />
     </PageShell>
   );

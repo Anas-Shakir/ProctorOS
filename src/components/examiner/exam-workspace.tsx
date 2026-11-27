@@ -33,6 +33,11 @@ import {
 import { updateExamSchema } from "@/lib/validators/exam";
 import type { DerivedExamStatus, PublishChecklist } from "@/lib/time";
 import type { QuestionItem } from "@/components/examiner/question-bank";
+import { CandidatesTab } from "@/components/examiner/candidates-tab";
+import type {
+  AvailableCandidateItem,
+  EnrolledCandidateItem,
+} from "@/lib/enrollments";
 
 export interface ExamWorkspaceData {
   id: string;
@@ -77,10 +82,14 @@ export function ExamWorkspace({
   initialExam,
   initialChecklist,
   bankQuestions,
+  initialEnrolled,
+  initialAvailableCandidates,
 }: {
   initialExam: ExamWorkspaceData;
   initialChecklist: PublishChecklist;
   bankQuestions: QuestionItem[];
+  initialEnrolled: EnrolledCandidateItem[];
+  initialAvailableCandidates: AvailableCandidateItem[];
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -89,6 +98,9 @@ export function ExamWorkspace({
   const [checklist, setChecklist] =
     React.useState<PublishChecklist>(initialChecklist);
   const [activeTab, setActiveTab] = React.useState("overview");
+  const [enrolledCount, setEnrolledCount] = React.useState(
+    initialEnrolled.length,
+  );
 
   // Overview form state
   const [title, setTitle] = React.useState(initialExam.title);
@@ -301,6 +313,11 @@ export function ExamWorkspace({
       label: "Questions",
       count: exam.examQuestions.length,
     },
+    {
+      id: "candidates",
+      label: "Candidates",
+      count: enrolledCount,
+    },
   ];
 
   return (
@@ -326,7 +343,7 @@ export function ExamWorkspace({
           </div>
           <p className="mt-2 font-mono text-xs text-ink-muted tabular-nums">
             Assigned marks: {exam.assignedMarks} / {exam.totalMarks} ·{" "}
-            {exam.durationMin} min · {exam.enrollmentCount} enrolled
+            {exam.durationMin} min · {enrolledCount} enrolled
           </p>
         </div>
 
@@ -623,6 +640,15 @@ export function ExamWorkspace({
             </div>
           )}
         </div>
+      )}
+
+      {activeTab === "candidates" && (
+        <CandidatesTab
+          examId={exam.id}
+          initialEnrolled={initialEnrolled}
+          initialAvailable={initialAvailableCandidates}
+          onCountChange={setEnrolledCount}
+        />
       )}
 
       {/* Pre-Publish Review Modal */}

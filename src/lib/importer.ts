@@ -1,5 +1,9 @@
 import Papa from "papaparse";
 import {
+  candidateImportRowSchema,
+  type CandidateImportRow,
+} from "@/lib/validators/enrollment";
+import {
   questionInputSchema,
   type QuestionInput,
 } from "@/lib/validators/question";
@@ -294,3 +298,80 @@ export const SAMPLE_QUESTIONS_JSON = JSON.stringify(
   null,
   2,
 );
+
+/**
+ * Parse and validate a CSV file of candidates (`name,email`).
+ * Flags invalid formats and duplicate emails within the file explicitly.
+ */
+export function parseCandidateImportCsv(
+  content: string,
+): ParsedImportBatch<CandidateImportRow> {
+  const validRows: CandidateImportRow[] = [];
+  const failed: ImportFailure[] = [];
+
+  const trimmed = content.trim();
+  if (!trimmed) {
+    return {
+      validRows,
+      failed: [{ row: 0, field: "file", message: "Uploaded CSV file is empty" }],
+    };
+  }
+
+  const csv = Papa.parse<Record<string, unknown>>(trimmed, {
+    header: true,
+    skipEmptyLines: "greedy",
+    transformHeader: normalizeHeader,
+  });
+
+  if (csv.errors.length > 0 && csv.data.length === 0) {
+    return {
+      validRows,
+      failed: csv.errors.map((err) => ({
+        row: (err.row ?? 0) + 2,
+        field: "csv",
+        message: err.message,
+      })),
+    };
+  }
+
+  const seenEmails = new Set<string>();
+
+  csv.data.forEach((raw, idx) => {
+    const rowNum = idx + 2;
+    const result = candidateImportRowSchema.safeParse({
+      name: String(raw.name ?? raw.fullname ?? "").trim(),
+      email: String(raw.email ?? "").trim(),
+    });
+
+    if (!result.success) {
+      const issue = result.error.issues[0];
+      failed.push({
+        row: rowNum,
+        field: String(issue?.path[0] ?? "row"),
+        message: issue?.message ?? "Invalid candidate row",
+      });
+      return;
+    }
+
+    if (seenEmails.has(result.data.email)) {
+      failed.push({
+        row: rowNum,
+        field: "email",
+        message: `Duplicate email "${result.data.email}" in CSV`,
+      });
+      return;
+    }
+
+    seenEmails.add(result.data.email);
+    validRows.push(result.data);
+  });
+
+  return { validRows, failed };
+}
+
+export const SAMPLE_CANDIDATES_CSV = `name,email
+Amina Tariq,amina.tariq@example.edu
+Bilal Mahmood,bilal.mahmood@example.edu
+Sara Siddiqui,sara.siddiqui@example.edu
+`;
+
