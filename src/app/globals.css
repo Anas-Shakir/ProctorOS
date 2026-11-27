@@ -1,0 +1,224 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-canvas: var(--bg-canvas);
+  --color-surface: var(--bg-surface);
+  --color-subtle: var(--bg-subtle);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+
+  --color-ink: var(--ink-primary);
+  --color-ink-muted: var(--ink-secondary);
+
+  --color-pine: var(--accent-primary);
+  --color-pine-hover: var(--accent-primary-hover);
+  --color-pine-tint: var(--accent-primary-tint);
+
+  --color-terracotta: var(--accent-secondary);
+  --color-terracotta-hover: var(--accent-secondary-hover);
+  --color-terracotta-tint: var(--accent-secondary-tint);
+
+  --font-sans: var(--font-plus-jakarta), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-serif: var(--font-newsreader), Georgia, serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, monospace;
+}
+
+:root {
+  /* 60 / 30 / 10 Flat Editorial Color System (No gradients) */
+  --bg-canvas: #FAF9F4;
+  --bg-surface: #FFFFFF;
+  --bg-subtle: #F2F0E8;
+
+  --border-default: #E5E5DF;
+  --border-strong: #CFCFC6;
+
+  --ink-primary: #1F2922;
+  --ink-secondary: #5C665F;
+
+  --accent-primary: #3A5A40;
+  --accent-primary-hover: #2E4833;
+  --accent-primary-tint: #EAF0EB;
+
+  --accent-secondary: #AE4F2F;
+  --accent-secondary-hover: #944125;
+  --accent-secondary-tint: #F8ECE8;
+
+  /* Emil Kowalski Motion Tokens */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --duration-press: 150ms;
+  --duration-ui: 200ms;
+  --duration-modal: 220ms;
+  --duration-tab: 240ms;
+}
+
+html {
+  background-color: var(--bg-canvas);
+  color: var(--ink-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--bg-canvas);
+  color: var(--ink-primary);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+}
+
+/* Tactile press feedback for interactive controls */
+.pressable {
+  transition:
+    transform var(--duration-press) var(--ease-out),
+    background-color var(--duration-press) ease,
+    border-color var(--duration-press) ease,
+    color var(--duration-press) ease;
+}
+
+.pressable:active:not(:disabled):not([aria-disabled="true"]) {
+  transform: scale(0.97);
+}
+
+/* Hover lift strictly on fine-pointer hover devices */
+@media (hover: hover) and (pointer: fine) {
+  .surface-hover {
+    transition:
+      border-color var(--duration-ui) ease,
+      transform var(--duration-ui) var(--ease-out);
+  }
+  .surface-hover:hover {
+    border-color: var(--border-strong);
+  }
+}
+
+/* Calm blur-crossfade bridge for live status swaps */
+.blur-swap-enter {
+  animation: blurSwapIn 220ms var(--ease-out) forwards;
+}
+
+@keyframes blurSwapIn {
+  from {
+    opacity: 0.35;
+    filter: blur(2px);
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+/* Staggered entry for non-interactive initial layout blocks */
+.stagger-in {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: staggerFadeUp 260ms var(--ease-out) forwards;
+  animation-delay: calc(var(--stagger-index, 0) * 45ms);
+}
+
+@keyframes staggerFadeUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Modal & Dialog GPU entry (never from scale(0)) */
+.modal-backdrop {
+  transition: opacity var(--duration-modal) var(--ease-out);
+}
+.modal-backdrop[data-state="closed"] {
+  opacity: 0;
+}
+.modal-backdrop[data-state="open"] {
+  opacity: 1;
+}
+
+.modal-panel {
+  transform-origin: center center;
+  transition:
+    opacity var(--duration-modal) var(--ease-out),
+    transform var(--duration-modal) var(--ease-out);
+}
+.modal-panel[data-state="closed"] {
+  opacity: 0;
+  transform: scale(0.95) translateY(6px);
+}
+.modal-panel[data-state="open"] {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+/* Toast transition (interruptible CSS transition) */
+.toast-item {
+  transition:
+    opacity 220ms var(--ease-out),
+    transform 240ms var(--ease-out);
+}
+.toast-item[data-state="entering"] {
+  opacity: 0;
+  transform: translateY(16px) scale(0.97);
+}
+.toast-item[data-state="open"] {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.toast-item[data-state="closing"] {
+  opacity: 0;
+  transform: translateY(8px) scale(0.97);
+}
+
+/* Accessible focus ring */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* Tabular numbers for countdowns, scores, and question indices */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Respect reduced motion: keep gentle opacity cues, remove transform travel */
+@media (prefers-reduced-motion: reduce) {
+  .pressable,
+  .surface-hover,
+  .modal-backdrop,
+  .modal-panel,
+  .toast-item {
+    transition-duration: 120ms;
+  }
+
+  .pressable:active:not(:disabled):not([aria-disabled="true"]) {
+    transform: none;
+  }
+
+  .stagger-in {
+    opacity: 0;
+    transform: none;
+    animation: fadeOnly 180ms ease forwards;
+    animation-delay: 0ms;
+  }
+
+  .blur-swap-enter {
+    animation: fadeOnly 150ms ease forwards;
+  }
+
+  .modal-panel[data-state="closed"],
+  .toast-item[data-state="entering"],
+  .toast-item[data-state="closing"] {
+    transform: none;
+  }
+
+  @keyframes fadeOnly {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
