@@ -37,10 +37,12 @@ import { CandidatesTab } from "@/components/examiner/candidates-tab";
 import { MonitorTab } from "@/components/examiner/monitor-tab";
 import { GradingTab } from "@/components/examiner/grading-tab";
 import { ResultsTab } from "@/components/examiner/results-tab";
+import { AnalyticsTab } from "@/components/examiner/analytics-tab";
 import type {
   AvailableCandidateItem,
   EnrolledCandidateItem,
 } from "@/lib/enrollments";
+import type { ExamAnalyticsPayload } from "@/lib/analytics";
 import type { ExamMonitorState } from "@/lib/monitor";
 import type { ResultRow, WrittenGradingItem } from "@/lib/results";
 
@@ -91,6 +93,7 @@ export function ExamWorkspace({
   initialAvailableCandidates,
   initialMonitorState,
   initialGradingState,
+  initialAnalytics,
 }: {
   initialExam: ExamWorkspaceData;
   initialChecklist: PublishChecklist;
@@ -105,6 +108,7 @@ export function ExamWorkspace({
     writtenItems: WrittenGradingItem[];
     results: ResultRow[];
   };
+  initialAnalytics: ExamAnalyticsPayload;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -352,6 +356,10 @@ export function ExamWorkspace({
       id: "results",
       label: "Results",
       count: gradingState.results.length,
+    },
+    {
+      id: "analytics",
+      label: "Analytics",
     },
   ];
 
@@ -722,6 +730,10 @@ export function ExamWorkspace({
             }))
           }
         />
+      )}
+
+      {activeTab === "analytics" && (
+        <AnalyticsTab examId={exam.id} initialAnalytics={initialAnalytics} />
       )}
 
       {/* Pre-Publish Review Modal */}
