@@ -22,6 +22,7 @@ export interface CandidateExamCard {
   attemptId: string | null;
   attemptStatus: string | null;
   deadlineAt: string | null;
+  resultsPublished: boolean;
 }
 
 export async function listCandidateExams(candidateId: string): Promise<{
@@ -46,6 +47,7 @@ export async function listCandidateExams(candidateId: string): Promise<{
             durationMin: true,
             totalMarks: true,
             status: true,
+            resultsPublished: true,
           },
         },
       },
@@ -107,6 +109,7 @@ export async function listCandidateExams(candidateId: string): Promise<{
       attemptId: attempt?.id ?? null,
       attemptStatus: attempt?.status ?? null,
       deadlineAt: attempt?.deadlineAt.toISOString() ?? null,
+      resultsPublished: exam.resultsPublished,
     };
   });
 

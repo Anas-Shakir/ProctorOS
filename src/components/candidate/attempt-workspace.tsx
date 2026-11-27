@@ -372,13 +372,22 @@ export function AttemptWorkspace({
                 )}
               </div>
 
-              <Link
-                href="/candidate"
-                className="pressable focus-ring inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-pine text-white text-sm font-medium hover:bg-pine-hover"
-              >
-                <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-                <span>Return to Dashboard</span>
-              </Link>
+              <div className="flex flex-wrap items-center gap-3">
+                <Link
+                  href="/candidate"
+                  className="pressable focus-ring inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-border-default bg-surface text-ink text-sm font-medium hover:border-border-strong"
+                >
+                  <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                  <span>Dashboard</span>
+                </Link>
+                <Link
+                  href={`/candidate/attempts/${initialPaper.attempt.id}/results`}
+                  className="pressable focus-ring inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-pine text-white text-sm font-medium hover:bg-pine-hover"
+                >
+                  <span>View Results</span>
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+              </div>
             </CardContent>
           </Card>
         </div>

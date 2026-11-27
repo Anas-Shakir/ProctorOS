@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
@@ -222,7 +223,9 @@ export function CandidateDashboard({
                       : exam.accessStatus === "CLOSED"
                         ? "Window closed"
                         : exam.accessStatus === "SUBMITTED"
-                          ? "Attempt recorded"
+                          ? exam.resultsPublished
+                            ? "Results published"
+                            : "Results not yet published"
                           : "Ready to enter"}
                   </span>
 
@@ -241,6 +244,18 @@ export function CandidateDashboard({
                       </span>
                       <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
                     </Button>
+                  )}
+
+                  {exam.accessStatus === "SUBMITTED" && exam.attemptId && (
+                    <Link
+                      href={`/candidate/attempts/${exam.attemptId}/results`}
+                      className="pressable focus-ring inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-border-default bg-surface text-xs font-medium text-ink hover:border-border-strong"
+                    >
+                      <span>
+                        {exam.resultsPublished ? "View Results" : "Check Status"}
+                      </span>
+                      <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                    </Link>
                   )}
                 </CardFooter>
               </Card>

@@ -34,10 +34,13 @@ import { updateExamSchema } from "@/lib/validators/exam";
 import type { DerivedExamStatus, PublishChecklist } from "@/lib/time";
 import type { QuestionItem } from "@/components/examiner/question-bank";
 import { CandidatesTab } from "@/components/examiner/candidates-tab";
+import { GradingTab } from "@/components/examiner/grading-tab";
+import { ResultsTab } from "@/components/examiner/results-tab";
 import type {
   AvailableCandidateItem,
   EnrolledCandidateItem,
 } from "@/lib/enrollments";
+import type { ResultRow, WrittenGradingItem } from "@/lib/results";
 
 export interface ExamWorkspaceData {
   id: string;
@@ -84,12 +87,20 @@ export function ExamWorkspace({
   bankQuestions,
   initialEnrolled,
   initialAvailableCandidates,
+  initialGradingState,
 }: {
   initialExam: ExamWorkspaceData;
   initialChecklist: PublishChecklist;
   bankQuestions: QuestionItem[];
   initialEnrolled: EnrolledCandidateItem[];
   initialAvailableCandidates: AvailableCandidateItem[];
+  initialGradingState: {
+    resultsPublished: boolean;
+    inProgressCount: number;
+    pendingWrittenAttempts: number;
+    writtenItems: WrittenGradingItem[];
+    results: ResultRow[];
+  };
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -101,6 +112,7 @@ export function ExamWorkspace({
   const [enrolledCount, setEnrolledCount] = React.useState(
     initialEnrolled.length,
   );
+  const [gradingState, setGradingState] = React.useState(initialGradingState);
 
   // Overview form state
   const [title, setTitle] = React.useState(initialExam.title);
@@ -306,6 +318,10 @@ export function ExamWorkspace({
     exam.examQuestions.length > 0 &&
     Math.abs(exam.assignedMarks - exam.totalMarks) < 0.001;
 
+  const pendingGradingCount = gradingState.writtenItems.filter(
+    (item) => item.latestScore === null,
+  ).length;
+
   const tabs = [
     { id: "overview", label: "Overview & Publish" },
     {
@@ -317,6 +333,16 @@ export function ExamWorkspace({
       id: "candidates",
       label: "Candidates",
       count: enrolledCount,
+    },
+    {
+      id: "grading",
+      label: "Grading",
+      count: pendingGradingCount,
+    },
+    {
+      id: "results",
+      label: "Results",
+      count: gradingState.results.length,
     },
   ];
 
@@ -648,6 +674,40 @@ export function ExamWorkspace({
           initialEnrolled={initialEnrolled}
           initialAvailable={initialAvailableCandidates}
           onCountChange={setEnrolledCount}
+        />
+      )}
+
+      {activeTab === "grading" && (
+        <GradingTab
+          examId={exam.id}
+          items={gradingState.writtenItems}
+          onUpdated={(next) =>
+            setGradingState({
+              resultsPublished: next.exam.resultsPublished,
+              inProgressCount: next.inProgressCount,
+              pendingWrittenAttempts: next.pendingWrittenAttempts,
+              writtenItems: next.writtenItems,
+              results: next.results,
+            })
+          }
+        />
+      )}
+
+      {activeTab === "results" && (
+        <ResultsTab
+          examId={exam.id}
+          examStatus={exam.status}
+          totalMarks={exam.totalMarks}
+          resultsPublished={gradingState.resultsPublished}
+          inProgressCount={gradingState.inProgressCount}
+          pendingWrittenAttempts={gradingState.pendingWrittenAttempts}
+          results={gradingState.results}
+          onPublished={() =>
+            setGradingState((prev) => ({
+              ...prev,
+              resultsPublished: true,
+            }))
+          }
         />
       )}
 

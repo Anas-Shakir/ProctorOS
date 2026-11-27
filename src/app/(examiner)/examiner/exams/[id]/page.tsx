@@ -4,6 +4,7 @@ import { getRoleHome } from "@/lib/session";
 import { getExamWorkspace } from "@/lib/exams";
 import { listQuestions } from "@/lib/questions";
 import { listExamEnrollments } from "@/lib/enrollments";
+import { getExaminerGradingAndResults } from "@/lib/results";
 import { PageShell } from "@/components/ui";
 import { RoleHeaderActions } from "@/components/auth/role-header-actions";
 import { ExamWorkspace } from "@/components/examiner/exam-workspace";
@@ -32,10 +33,11 @@ export default async function ExaminerExamWorkspacePage({
     redirect("/examiner");
   }
 
-  const [workspace, bank, enrollments] = await Promise.all([
+  const [workspace, bank, enrollments, gradingSummary] = await Promise.all([
     getExamWorkspace(id),
     listQuestions(user),
     listExamEnrollments(id),
+    getExaminerGradingAndResults(id),
   ]);
 
   const serializedExam = {
@@ -99,6 +101,13 @@ export default async function ExaminerExamWorkspacePage({
         bankQuestions={serializedBank}
         initialEnrolled={enrollments.enrolled}
         initialAvailableCandidates={enrollments.availableCandidates}
+        initialGradingState={{
+          resultsPublished: gradingSummary.exam.resultsPublished,
+          inProgressCount: gradingSummary.inProgressCount,
+          pendingWrittenAttempts: gradingSummary.pendingWrittenAttempts,
+          writtenItems: gradingSummary.writtenItems,
+          results: gradingSummary.results,
+        }}
       />
     </PageShell>
   );
