@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   CalendarClock,
@@ -74,6 +75,7 @@ export function CandidateDashboard({
 }: {
   initialExams: CandidateExamCard[];
 }) {
+  const router = useRouter();
   const toast = useToast();
   const [exams, setExams] = React.useState<CandidateExamCard[]>(initialExams);
   const [activeTab, setActiveTab] = React.useState("AVAILABLE");
@@ -134,12 +136,12 @@ export function CandidateDashboard({
       );
 
       toast.success(
-        `Attempt ready (${title})`,
-        "Server entry verified. Live exam workspace arrives in Stage 5.",
+        `Entering ${title}`,
+        "Loading your frozen assessment paper...",
       );
+      router.push(`/candidate/attempts/${data.attempt.id}`);
     } catch {
       toast.warning("Network error", "Could not start exam attempt.");
-    } finally {
       setStartingExamId(null);
     }
   };
