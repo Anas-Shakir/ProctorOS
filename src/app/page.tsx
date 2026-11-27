@@ -44,12 +44,6 @@ export default function HomePage() {
             </nav>
 
             <Link
-              href="/design"
-              className="pressable focus-ring hidden sm:inline-flex items-center h-9 px-3.5 rounded-lg text-sm font-medium text-ink-muted hover:text-ink hover:bg-subtle"
-            >
-              UI Kit
-            </Link>
-            <Link
               href="/login"
               className="pressable focus-ring inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-pine text-white text-sm font-medium hover:bg-pine-hover"
             >

@@ -29,8 +29,6 @@ import {
   CardHeader,
   CardTitle,
   SegmentedTabs,
-  StatusPill,
-  type NetworkSyncState,
 } from "@/components/ui";
 import { cn } from "@/lib/cn";
 
@@ -199,20 +197,32 @@ const ROLE_DETAILS: Record<
   },
 };
 
+const HERO_PROOF_ITEMS = [
+  {
+    title: "Frozen Question Snapshot",
+    detail: "Questions and shuffled options locked when the exam began",
+    ochre: false,
+  },
+  {
+    title: "Server-Synced Timer & Offline Recovery",
+    detail: "Deadline enforced by server with zero lost keystrokes",
+    ochre: false,
+  },
+  {
+    title: "Append-Only Grade History",
+    detail: "Original 42 pts preserved alongside +3.0 ruling adjustment",
+    ochre: true,
+  },
+  {
+    title: "Tamper-Evident QR Receipt",
+    detail: "SHA-256 audit chain verified and scannable without login",
+    ochre: false,
+  },
+];
+
 export function LandingShowcase() {
   const rootRef = React.useRef<HTMLDivElement>(null);
-  const reconnectTimerRef = React.useRef<number | null>(null);
   const [activeRole, setActiveRole] = React.useState("candidate");
-  const [simNetwork, setSimNetwork] = React.useState<NetworkSyncState>("saved");
-  const [simOptionC, setSimOptionC] = React.useState(true);
-
-  React.useEffect(() => {
-    return () => {
-      if (reconnectTimerRef.current !== null) {
-        window.clearTimeout(reconnectTimerRef.current);
-      }
-    };
-  }, []);
 
   React.useEffect(() => {
     const root = rootRef.current;
@@ -266,26 +276,6 @@ export function LandingShowcase() {
 
     return () => ctx.revert();
   }, []);
-
-  const handleCycleNetworkSim = (nextState: NetworkSyncState) => {
-    if (reconnectTimerRef.current !== null) {
-      window.clearTimeout(reconnectTimerRef.current);
-      reconnectTimerRef.current = null;
-    }
-    if (nextState === "offline") {
-      setSimNetwork("offline");
-      return;
-    }
-    if (nextState === "saved") {
-      setSimNetwork("reconnecting");
-      reconnectTimerRef.current = window.setTimeout(() => {
-        setSimNetwork("saved");
-        reconnectTimerRef.current = null;
-      }, 600);
-      return;
-    }
-    setSimNetwork(nextState);
-  };
 
   const rolePanel = ROLE_DETAILS[activeRole];
 
@@ -343,101 +333,77 @@ export function LandingShowcase() {
               </div>
             </div>
 
-            {/* Interactive Live Session Preview */}
+            {/* Defensible Grade Proof Card */}
             <div className="lg:col-span-5 min-w-0 hero-card-anim">
-              <Card className="overflow-hidden border-border-strong/75">
-                <div className="bg-subtle/65 border-b border-border-default px-5 py-4 flex flex-wrap items-center justify-between gap-3">
+              <Card className="overflow-hidden border-border-strong/80">
+                <div className="bg-subtle/70 border-b border-border-default px-6 py-4 flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-ink truncate">
-                      CS-412 · Distributed Systems
+                      CS-401 · Official Grade Proof
                     </p>
-                    <p className="text-xs font-mono text-ink-muted mt-0.5">
-                      Snapshot frozen · rev 4
+                    <p className="text-xs text-ink-muted mt-0.5">
+                      Sample verifiable transcript record
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <StatusPill state={simNetwork} />
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-border-default bg-surface px-3 py-1 text-xs font-mono font-medium text-ink tabular-nums">
-                      <Clock
-                        className="h-3.5 w-3.5 text-pine"
-                        aria-hidden="true"
-                      />
-                      00:42:18
-                    </span>
-                  </div>
+                  <Badge
+                    variant="pine"
+                    icon={
+                      <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                    }
+                  >
+                    Verified
+                  </Badge>
                 </div>
 
-                <CardContent className="p-5 sm:p-6 space-y-5">
-                  <div className="rounded-xl border border-border-default bg-canvas p-4 sm:p-5 space-y-3.5">
-                    <p className="text-sm font-medium text-ink leading-snug">
-                      Q4. Which guarantees hold when a partitioned Raft follower
-                      rejoins?
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setSimOptionC((prev) => !prev)}
-                      className={cn(
-                        "w-full text-left flex items-center gap-3 rounded-lg border px-3.5 py-2.5 text-sm transition-colors cursor-pointer focus-ring",
-                        simOptionC
-                          ? "border-pine/40 bg-pine-tint/70 text-ink"
-                          : "border-border-default bg-surface text-ink-muted hover:border-border-strong",
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "h-4 w-4 rounded flex items-center justify-center shrink-0 font-mono text-[10px]",
-                          simOptionC
-                            ? "bg-pine text-white"
-                            : "border border-border-strong bg-surface",
-                        )}
-                      >
-                        {simOptionC ? "✓" : ""}
-                      </span>
-                      <span>Stale leader steps down upon higher term RPC</span>
-                    </button>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
-                    <span className="text-ink-muted">Test local outbox</span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleCycleNetworkSim("offline")}
-                        className={cn(
-                          "px-3 py-1.5 rounded-lg text-xs font-medium border cursor-pointer transition-colors focus-ring",
-                          simNetwork === "offline"
-                            ? "bg-terracotta-tint border-terracotta/40 text-terracotta"
-                            : "bg-canvas border-border-default text-ink-muted hover:text-ink",
-                        )}
-                      >
-                        Drop Wi-Fi
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleCycleNetworkSim("saved")}
-                        className={cn(
-                          "px-3 py-1.5 rounded-lg text-xs font-medium border cursor-pointer transition-colors focus-ring",
-                          simNetwork !== "offline"
-                            ? "bg-pine-tint border-pine/30 text-pine"
-                            : "bg-canvas border-border-default text-ink-muted hover:text-ink",
-                        )}
-                      >
-                        Reconnect
-                      </button>
+                <CardContent className="p-6 space-y-5">
+                  {/* Score + Ruling highlight */}
+                  <div className="rounded-xl border border-border-default bg-canvas px-5 py-4 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs text-ink-muted">Final Score</p>
+                      <p className="font-serif text-3xl font-medium text-ink tabular-nums leading-tight mt-0.5">
+                        45{" "}
+                        <span className="text-base font-sans text-ink-muted font-normal">
+                          / 50 (90%)
+                        </span>
+                      </p>
                     </div>
+                    <span className="rounded-lg bg-ochre-tint px-3 py-1.5 text-xs font-medium text-ink">
+                      42 pts → +3.0 Ruling
+                    </span>
                   </div>
 
-                  <div className="rounded-lg bg-ochre-tint px-4 py-2.5 flex items-center justify-between gap-2 text-xs text-ink">
-                    <span className="font-medium inline-flex items-center gap-2">
-                      <ShieldCheck
-                        className="h-4 w-4 text-ochre"
-                        aria-hidden="true"
-                      />
-                      AuditHead #4 Verified
-                    </span>
-                    <span className="font-mono text-ink-muted">
-                      Append-only ledger
-                    </span>
+                  {/* Clear 4-point proof trail */}
+                  <div className="space-y-3">
+                    {HERO_PROOF_ITEMS.map((proof) => (
+                      <div
+                        key={proof.title}
+                        className={cn(
+                          "flex items-start gap-3 rounded-lg px-3 py-2.5",
+                          proof.ochre ? "bg-ochre-tint/55" : "bg-transparent",
+                        )}
+                      >
+                        <CheckCircle2
+                          className={cn(
+                            "h-4 w-4 shrink-0 mt-0.5",
+                            proof.ochre ? "text-ochre" : "text-pine",
+                          )}
+                          aria-hidden="true"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-ink leading-snug">
+                            {proof.title}
+                          </p>
+                          <p className="text-xs text-ink-muted mt-0.5 leading-relaxed">
+                            {proof.detail}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="pt-3 border-t border-border-default flex items-center justify-between gap-2 text-xs text-ink-muted">
+                    <span className="font-mono">Chain: GENESIS → #4</span>
+                    <span>Zero silent edits</span>
                   </div>
                 </CardContent>
               </Card>
@@ -668,12 +634,6 @@ export function LandingShowcase() {
             </div>
 
             <div className="flex flex-wrap items-center gap-3.5 shrink-0">
-              <Link
-                href="/design"
-                className="pressable focus-ring inline-flex items-center h-11 px-5 rounded-lg border border-white/25 text-sm font-medium text-white hover:bg-white/10 transition-colors"
-              >
-                UI Kit
-              </Link>
               <Link
                 href="/login"
                 className="pressable focus-ring inline-flex items-center gap-2 h-11 px-6 rounded-lg bg-canvas text-ink text-sm font-medium hover:bg-subtle transition-colors"
