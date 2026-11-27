@@ -34,12 +34,14 @@ import { updateExamSchema } from "@/lib/validators/exam";
 import type { DerivedExamStatus, PublishChecklist } from "@/lib/time";
 import type { QuestionItem } from "@/components/examiner/question-bank";
 import { CandidatesTab } from "@/components/examiner/candidates-tab";
+import { MonitorTab } from "@/components/examiner/monitor-tab";
 import { GradingTab } from "@/components/examiner/grading-tab";
 import { ResultsTab } from "@/components/examiner/results-tab";
 import type {
   AvailableCandidateItem,
   EnrolledCandidateItem,
 } from "@/lib/enrollments";
+import type { ExamMonitorState } from "@/lib/monitor";
 import type { ResultRow, WrittenGradingItem } from "@/lib/results";
 
 export interface ExamWorkspaceData {
@@ -87,6 +89,7 @@ export function ExamWorkspace({
   bankQuestions,
   initialEnrolled,
   initialAvailableCandidates,
+  initialMonitorState,
   initialGradingState,
 }: {
   initialExam: ExamWorkspaceData;
@@ -94,6 +97,7 @@ export function ExamWorkspace({
   bankQuestions: QuestionItem[];
   initialEnrolled: EnrolledCandidateItem[];
   initialAvailableCandidates: AvailableCandidateItem[];
+  initialMonitorState: ExamMonitorState;
   initialGradingState: {
     resultsPublished: boolean;
     inProgressCount: number;
@@ -333,6 +337,11 @@ export function ExamWorkspace({
       id: "candidates",
       label: "Candidates",
       count: enrolledCount,
+    },
+    {
+      id: "monitor",
+      label: "Monitor",
+      count: initialMonitorState.attempts.length,
     },
     {
       id: "grading",
@@ -675,6 +684,10 @@ export function ExamWorkspace({
           initialAvailable={initialAvailableCandidates}
           onCountChange={setEnrolledCount}
         />
+      )}
+
+      {activeTab === "monitor" && (
+        <MonitorTab examId={exam.id} initialState={initialMonitorState} />
       )}
 
       {activeTab === "grading" && (

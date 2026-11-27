@@ -12,6 +12,7 @@ import {
   Clock,
   Flag,
   LayoutGrid,
+  Megaphone,
   NotebookPen,
   Send,
   ShieldCheck,
@@ -114,9 +115,15 @@ export function AttemptWorkspace({
     initialPaper.scratchpad.content,
   );
   const [scratchpadOpen, setScratchpadOpen] = React.useState(false);
+  const [noticesOpen, setNoticesOpen] = React.useState(false);
+  const [announcements, setAnnouncements] = React.useState<
+    Array<{ id: string; message: string; authorName: string; createdAt: string }>
+  >([]);
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
   const [submitModalOpen, setSubmitModalOpen] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
+
+  const seenAnnouncementIdsRef = React.useRef<Set<string> | null>(null);
 
   const answersRef = React.useRef(answers);
   React.useEffect(() => {
@@ -268,6 +275,53 @@ export function AttemptWorkspace({
       window.removeEventListener("blur", onBlur);
     };
   }, [initialPaper.attempt.id, isActive]);
+
+  // Poll examiner announcements every 10s while attempt is active
+  React.useEffect(() => {
+    if (!isActive) return;
+
+    const pollAnnouncements = async () => {
+      try {
+        const res = await fetch(
+          `/api/attempts/${initialPaper.attempt.id}/announcements`,
+          { cache: "no-store" },
+        );
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          announcements: Array<{
+            id: string;
+            message: string;
+            authorName: string;
+            createdAt: string;
+          }>;
+        };
+        const list = data.announcements ?? [];
+        setAnnouncements(list);
+
+        if (seenAnnouncementIdsRef.current === null) {
+          seenAnnouncementIdsRef.current = new Set(list.map((a) => a.id));
+        } else {
+          for (const item of list) {
+            if (!seenAnnouncementIdsRef.current.has(item.id)) {
+              seenAnnouncementIdsRef.current.add(item.id);
+              toast.info("Announcement from Examiner", item.message);
+            }
+          }
+        }
+      } catch {
+        // Ignore transient polling error
+      }
+    };
+
+    void pollAnnouncements();
+    const id = window.setInterval(() => {
+      if (!document.hidden) {
+        void pollAnnouncements();
+      }
+    }, 10_000);
+
+    return () => window.clearInterval(id);
+  }, [initialPaper.attempt.id, isActive, toast]);
 
   // Keyboard navigation (N / P / ArrowLeft / ArrowRight) — instant, zero animation
   React.useEffect(() => {
@@ -458,6 +512,18 @@ export function AttemptWorkspace({
               <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               <span>{formatCountdown(remainingMs)}</span>
             </div>
+
+            <Button
+              variant={noticesOpen ? "primary" : "secondary"}
+              size="sm"
+              aria-label="Exam announcements"
+              onClick={() => setNoticesOpen(true)}
+            >
+              <Megaphone className="h-4 w-4" aria-hidden="true" />
+              <span className="hidden sm:inline">
+                Notices{announcements.length > 0 ? ` (${announcements.length})` : ""}
+              </span>
+            </Button>
 
             <Button
               variant={scratchpadOpen ? "primary" : "secondary"}
@@ -908,6 +974,42 @@ export function AttemptWorkspace({
             </div>
           )}
         </div>
+      </Modal>
+
+      {/* Persistent Announcement Tray */}
+      <Modal
+        open={noticesOpen}
+        onClose={() => setNoticesOpen(false)}
+        title="Examiner Announcements"
+        description="Broadcast updates sent during this examination."
+        footer={
+          <Button variant="secondary" onClick={() => setNoticesOpen(false)}>
+            Close
+          </Button>
+        }
+      >
+        {announcements.length === 0 ? (
+          <p className="py-6 text-center text-sm text-ink-muted">
+            No announcements have been posted for this exam.
+          </p>
+        ) : (
+          <div className="max-h-72 overflow-y-auto space-y-2.5 pr-1">
+            {announcements.map((item) => (
+              <div
+                key={item.id}
+                className="rounded-lg border border-border-default bg-canvas px-4 py-3 space-y-1"
+              >
+                <p className="text-sm text-ink leading-relaxed">
+                  {item.message}
+                </p>
+                <p className="font-mono text-[11px] text-ink-muted tabular-nums">
+                  {item.authorName} ·{" "}
+                  {new Date(item.createdAt).toLocaleTimeString()}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </Modal>
     </div>
   );
