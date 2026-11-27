@@ -391,53 +391,70 @@ export async function saveAttemptAnswer(
     throw new HttpError(404, "Question not found on this attempt");
   }
 
-  return db.$transaction(async (tx) => {
-    const existing = await tx.answer.findUnique({
-      where: { attemptQuestionId: input.attemptQuestionId },
-    });
-
-    if (existing && input.revision <= existing.revision) {
-      return {
-        ok: true,
-        ignored: true,
-        revision: existing.revision,
-        savedAt: existing.savedAt.toISOString(),
-        serverNow: serverNow.toISOString(),
-        deadlineAt: checked.deadlineAt.toISOString(),
-      };
-    }
-
-    const saved = existing
-      ? await tx.answer.update({
-          where: { id: existing.id },
-          data: {
-            selectedOptionIds: input.selectedOptionIds,
-            writtenText: input.writtenText ?? null,
-            markedForReview: input.markedForReview,
-            revision: input.revision,
-            savedAt: serverNow,
-          },
-        })
-      : await tx.answer.create({
-          data: {
-            attemptQuestionId: input.attemptQuestionId,
-            selectedOptionIds: input.selectedOptionIds,
-            writtenText: input.writtenText ?? null,
-            markedForReview: input.markedForReview,
-            revision: input.revision,
-            savedAt: serverNow,
-          },
+  const upsertAnswerTx = () =>
+    db.$transaction(
+      async (tx) => {
+        const existing = await tx.answer.findUnique({
+          where: { attemptQuestionId: input.attemptQuestionId },
         });
 
-    return {
-      ok: true,
-      ignored: false,
-      revision: saved.revision,
-      savedAt: saved.savedAt.toISOString(),
-      serverNow: serverNow.toISOString(),
-      deadlineAt: checked.deadlineAt.toISOString(),
-    };
-  });
+        if (existing && input.revision <= existing.revision) {
+          return {
+            ok: true,
+            ignored: true,
+            revision: existing.revision,
+            savedAt: existing.savedAt.toISOString(),
+            serverNow: serverNow.toISOString(),
+            deadlineAt: checked.deadlineAt.toISOString(),
+          };
+        }
+
+        const saved = existing
+          ? await tx.answer.update({
+              where: { id: existing.id },
+              data: {
+                selectedOptionIds: input.selectedOptionIds,
+                writtenText: input.writtenText ?? null,
+                markedForReview: input.markedForReview,
+                revision: input.revision,
+                savedAt: serverNow,
+              },
+            })
+          : await tx.answer.create({
+              data: {
+                attemptQuestionId: input.attemptQuestionId,
+                selectedOptionIds: input.selectedOptionIds,
+                writtenText: input.writtenText ?? null,
+                markedForReview: input.markedForReview,
+                revision: input.revision,
+                savedAt: serverNow,
+              },
+            });
+
+        return {
+          ok: true,
+          ignored: false,
+          revision: saved.revision,
+          savedAt: saved.savedAt.toISOString(),
+          serverNow: serverNow.toISOString(),
+          deadlineAt: checked.deadlineAt.toISOString(),
+        };
+      },
+      { maxWait: 15000, timeout: 30000 },
+    );
+
+  try {
+    return await upsertAnswerTx();
+  } catch (error) {
+    // Concurrent first-save race on unique attemptQuestionId -> retry once as update
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return upsertAnswerTx();
+    }
+    throw error;
+  }
 }
 
 export async function saveAttemptScratchpad(

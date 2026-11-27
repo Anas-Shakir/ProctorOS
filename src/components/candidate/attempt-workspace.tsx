@@ -143,9 +143,16 @@ export function AttemptWorkspace({
   }, [answers]);
 
   const submittingRef = React.useRef(false);
+  const statusRef = React.useRef(status);
+  React.useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
 
   const handleFinalizedRemote = React.useCallback(() => {
-    setStatus((prev) => (prev === "IN_PROGRESS" ? "AUTO_SUBMITTED" : prev));
+    if (submittingRef.current || statusRef.current !== "IN_PROGRESS") {
+      return;
+    }
+    setStatus("AUTO_SUBMITTED");
     toast.warning(
       "Attempt finalized",
       "The submission deadline has been reached.",

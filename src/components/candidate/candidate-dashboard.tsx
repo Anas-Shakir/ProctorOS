@@ -119,6 +119,7 @@ export function CandidateDashboard({
       const data = await res.json();
       if (!res.ok) {
         toast.warning("Entry refused", data.error ?? "Cannot start this exam");
+        setStartingExamId(null);
         return;
       }
 
