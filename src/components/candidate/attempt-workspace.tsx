@@ -16,7 +16,6 @@ import {
   NotebookPen,
   RotateCcw,
   Send,
-  ShieldCheck,
   SlidersHorizontal,
   X,
 } from "lucide-react";
@@ -26,6 +25,7 @@ import {
 } from "@/lib/validators/prefs";
 import {
   Badge,
+  BrandLogo,
   Button,
   Card,
   CardContent,
@@ -608,9 +608,7 @@ export function AttemptWorkspace({
       <header className="sticky top-0 z-30 bg-surface border-b border-border-default">
         <div className="mx-auto max-w-6xl px-3 sm:px-8 h-16 flex items-center justify-between gap-2 sm:gap-3">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-            <span className="h-8 w-8 rounded-lg bg-pine text-white flex items-center justify-center shrink-0">
-              <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-            </span>
+            <BrandLogo size="md" />
             <div className="min-w-0">
               <p className="text-xs sm:text-sm font-semibold text-ink truncate">
                 {initialPaper.attempt.examTitle}

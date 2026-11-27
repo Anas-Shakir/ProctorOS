@@ -25,3 +25,4 @@ export { SegmentedTabs, type SegmentedTabsProps, type TabItem } from "./tabs";
 export { ToastProvider, useToast, type ToastPayload, type ToastTone } from "./toast";
 export { StatusPill, type NetworkSyncState } from "./status-pill";
 export { PageShell, type PageShellProps } from "./page-shell";
+export { BrandLogo, type BrandLogoProps } from "./brand-logo";

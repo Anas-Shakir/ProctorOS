@@ -18,6 +18,9 @@
   --color-terracotta-hover: var(--accent-secondary-hover);
   --color-terracotta-tint: var(--accent-secondary-tint);
 
+  --color-ochre: var(--accent-ochre);
+  --color-ochre-tint: var(--accent-ochre-tint);
+
   --font-sans: var(--font-plus-jakarta), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-serif: var(--font-newsreader), Georgia, serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, monospace;
@@ -43,6 +46,9 @@
   --accent-secondary-hover: #944125;
   --accent-secondary-tint: #F8ECE8;
 
+  --accent-ochre: #8C6723;
+  --accent-ochre-tint: #F4EAD2;
+
   /* Emil Kowalski Motion Tokens */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
@@ -57,6 +63,8 @@
 html {
   background-color: var(--bg-canvas);
   color: var(--ink-primary);
+  overflow-x: clip;
+  scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -66,6 +74,7 @@ body {
   color: var(--ink-primary);
   font-family: var(--font-sans);
   line-height: 1.6;
+  overflow-x: clip;
 }
 
 /* Tactile press feedback for interactive controls */

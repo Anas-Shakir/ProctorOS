@@ -1,6 +1,6 @@
 import * as React from "react";
 import Link from "next/link";
-import { ShieldCheck } from "lucide-react";
+import { BrandLogo } from "@/components/ui/brand-logo";
 import { cn } from "@/lib/cn";
 
 export interface PageShellProps {
@@ -38,9 +38,7 @@ export function PageShell({
             href="/"
             className="focus-ring inline-flex items-center gap-2.5 rounded-md py-1"
           >
-            <span className="h-8 w-8 rounded-lg bg-pine text-white flex items-center justify-center shrink-0">
-              <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-            </span>
+            <BrandLogo size="md" />
             <span className="text-[15px] font-semibold tracking-[-0.02em] text-ink">
               ProctorOS
             </span>
