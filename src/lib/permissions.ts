@@ -86,6 +86,29 @@ export async function requireExamOwner(examId: string) {
   return { user, exam };
 }
 
+/** Require EXAMINER who owns the question (or ADMIN). */
+export async function requireQuestionOwner(questionId: string) {
+  const user = await requireRole(["EXAMINER", "ADMIN"]);
+  const question = await db.question.findUnique({
+    where: { id: questionId },
+    select: {
+      id: true,
+      ownerId: true,
+      version: true,
+    },
+  });
+
+  if (!question) {
+    throw new HttpError(404, "Question not found");
+  }
+
+  if (user.role !== "ADMIN" && question.ownerId !== user.id) {
+    throw new HttpError(403, "You do not own this question");
+  }
+
+  return { user, question };
+}
+
 /** Require CANDIDATE enrolled in the target exam. */
 export async function requireEnrollment(examId: string) {
   const user = await requireRole(["CANDIDATE"]);
