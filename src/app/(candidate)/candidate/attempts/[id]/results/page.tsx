@@ -23,9 +23,15 @@ import {
   HttpError,
   requireAttemptOwner,
 } from "@/lib/permissions";
+import { getCandidateAttemptDisputes } from "@/lib/disputes";
 import { getCandidateAttemptResult } from "@/lib/results";
 import { getRoleHome } from "@/lib/session";
 import { cn } from "@/lib/cn";
+import {
+  AttemptGradeHistoryPanel,
+  AttemptIncidentsBanner,
+  QuestionDisputeControls,
+} from "@/components/candidate/dispute-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +55,17 @@ export default async function CandidateAttemptResultsPage({
     redirect("/candidate");
   }
 
-  const result = await getCandidateAttemptResult(id);
+  const [result, disputes] = await Promise.all([
+    getCandidateAttemptResult(id),
+    getCandidateAttemptDisputes(id, user.id).catch(() => []),
+  ]);
+
+  const disputesByQuestion = new Map<string, typeof disputes>();
+  for (const d of disputes) {
+    const list = disputesByQuestion.get(d.attemptQuestionId) ?? [];
+    list.push(d);
+    disputesByQuestion.set(d.attemptQuestionId, list);
+  }
 
   return (
     <PageShell
@@ -126,6 +142,15 @@ export default async function CandidateAttemptResultsPage({
                 </div>
               </CardContent>
             </Card>
+
+            <AttemptIncidentsBanner incidents={result.incidents} />
+
+            <AttemptGradeHistoryPanel
+              originalTotal={result.scoreChangeHistory.originalTotal}
+              currentTotal={result.scoreChangeHistory.currentTotal}
+              totalMarks={result.totalMarks}
+              events={result.scoreChangeHistory.events}
+            />
 
             <div className="space-y-4">
               {result.questions.map((q) => (
@@ -243,6 +268,15 @@ export default async function CandidateAttemptResultsPage({
                         ))}
                       </div>
                     )}
+
+                    <QuestionDisputeControls
+                      attemptId={id}
+                      attemptQuestionId={q.attemptQuestionId}
+                      questionPosition={q.position}
+                      initialDisputes={
+                        disputesByQuestion.get(q.attemptQuestionId) ?? []
+                      }
+                    />
                   </CardContent>
                 </Card>
               ))}

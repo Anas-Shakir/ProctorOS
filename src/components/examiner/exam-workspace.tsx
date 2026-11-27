@@ -39,6 +39,13 @@ import { MonitorTab } from "@/components/examiner/monitor-tab";
 import { GradingTab } from "@/components/examiner/grading-tab";
 import { ResultsTab } from "@/components/examiner/results-tab";
 import { AnalyticsTab } from "@/components/examiner/analytics-tab";
+import { DisputesTab } from "@/components/examiner/disputes-tab";
+import type { AuditLogEntryView } from "@/lib/audit";
+import type {
+  ExamRulingItem,
+  ExamRulingQuestionTarget,
+  ExaminerDisputeItem,
+} from "@/lib/disputes";
 import type {
   AvailableCandidateItem,
   EnrolledCandidateItem,
@@ -95,6 +102,11 @@ export function ExamWorkspace({
   initialMonitorState,
   initialGradingState,
   initialAnalytics,
+  initialDisputes,
+  initialRulings,
+  initialQuestionTargets,
+  initialAuditEntries,
+  initialAuditHeadHash,
 }: {
   initialExam: ExamWorkspaceData;
   initialChecklist: PublishChecklist;
@@ -110,6 +122,11 @@ export function ExamWorkspace({
     results: ResultRow[];
   };
   initialAnalytics: ExamAnalyticsPayload;
+  initialDisputes: ExaminerDisputeItem[];
+  initialRulings: ExamRulingItem[];
+  initialQuestionTargets: ExamRulingQuestionTarget[];
+  initialAuditEntries: AuditLogEntryView[];
+  initialAuditHeadHash: string;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -354,6 +371,10 @@ export function ExamWorkspace({
     (item) => item.latestScore === null,
   ).length;
 
+  const openDisputesCount = initialDisputes.filter(
+    (d) => d.status === "OPEN" || d.status === "UNDER_REVIEW",
+  ).length;
+
   const tabs = [
     { id: "overview", label: "Overview & Publish" },
     {
@@ -384,6 +405,11 @@ export function ExamWorkspace({
     {
       id: "analytics",
       label: "Analytics",
+    },
+    {
+      id: "disputes",
+      label: "Disputes & Audit",
+      count: openDisputesCount,
     },
   ];
 
@@ -767,6 +793,33 @@ export function ExamWorkspace({
 
       {activeTab === "analytics" && (
         <AnalyticsTab examId={exam.id} initialAnalytics={initialAnalytics} />
+      )}
+
+      {activeTab === "disputes" && (
+        <DisputesTab
+          examId={exam.id}
+          initialDisputes={initialDisputes}
+          initialRulings={initialRulings}
+          initialQuestionTargets={initialQuestionTargets}
+          initialAuditEntries={initialAuditEntries}
+          initialAuditHeadHash={initialAuditHeadHash}
+          onGradesChanged={async () => {
+            const res = await fetch(`/api/examiner/exams/${exam.id}/results`, {
+              cache: "no-store",
+            });
+            if (res.ok) {
+              const next = await res.json();
+              setGradingState({
+                resultsPublished: next.exam.resultsPublished,
+                inProgressCount: next.inProgressCount,
+                pendingWrittenAttempts: next.pendingWrittenAttempts,
+                writtenItems: next.writtenItems,
+                results: next.results,
+              });
+            }
+            router.refresh();
+          }}
+        />
       )}
 
       {/* Pre-Publish Review Modal */}

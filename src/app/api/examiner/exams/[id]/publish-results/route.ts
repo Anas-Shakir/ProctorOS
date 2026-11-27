@@ -13,7 +13,7 @@ export async function POST(
 ) {
   try {
     const { id } = await context.params;
-    await requireExamOwner(id);
+    const { user } = await requireExamOwner(id);
 
     const body = await request.json().catch(() => ({}));
     const parsed = publishResultsSchema.safeParse(body);
@@ -21,7 +21,7 @@ export async function POST(
       throw new HttpError(400, "Invalid publication request");
     }
 
-    const result = await publishExamResults(id, parsed.data.override);
+    const result = await publishExamResults(id, parsed.data.override, user.id);
     return NextResponse.json(result);
   } catch (error) {
     return handleApiError(error);

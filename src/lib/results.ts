@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { appendAuditLog } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { finalizeExpired } from "@/lib/attempts";
 import {
@@ -261,7 +262,21 @@ export async function saveManualGrade(params: {
     });
 
     await supersedeReportTokens(tx, aq.attempt.id);
-  });
+
+    await appendAuditLog(tx, {
+      actorId: params.examinerId,
+      action: "MANUAL_GRADE",
+      entity: "AttemptQuestion",
+      entityId: aq.id,
+      payload: {
+        examId: params.examId,
+        attemptId: aq.attempt.id,
+        score: roundedScore,
+        totalScore: roundScore(total),
+        reason: params.reason?.trim() || "Manual grade",
+      },
+    });
+  }, { maxWait: 15000, timeout: 30000 });
 
   return getExaminerGradingAndResults(params.examId);
 }
@@ -270,7 +285,11 @@ export async function saveManualGrade(params: {
  * Controlled publication gate: blocks publishing if written answers remain
  * ungraded unless the examiner explicitly confirms override.
  */
-export async function publishExamResults(examId: string, override = false) {
+export async function publishExamResults(
+  examId: string,
+  override = false,
+  actorId?: string,
+) {
   const summary = await getExaminerGradingAndResults(examId);
 
   if (summary.exam.status !== "PUBLISHED") {
@@ -288,10 +307,26 @@ export async function publishExamResults(examId: string, override = false) {
     );
   }
 
-  const updated = await db.exam.update({
-    where: { id: examId },
-    data: { resultsPublished: true },
-    select: { id: true, resultsPublished: true },
+  const updated = await db.$transaction(async (tx) => {
+    const exam = await tx.exam.update({
+      where: { id: examId },
+      data: { resultsPublished: true },
+      select: { id: true, resultsPublished: true },
+    });
+
+    await appendAuditLog(tx, {
+      actorId: actorId ?? null,
+      action: "RESULTS_PUBLISHED",
+      entity: "Exam",
+      entityId: examId,
+      payload: {
+        examId,
+        override,
+        attemptCount: summary.results.length,
+      },
+    });
+
+    return exam;
   });
 
   return updated;
@@ -418,6 +453,9 @@ export async function getCandidateAttemptResult(attemptId: string) {
           },
         },
       },
+      incidents: {
+        orderBy: { at: "asc" },
+      },
     },
   });
 
@@ -497,6 +535,64 @@ export async function getCandidateAttemptResult(attemptId: string) {
       ? Math.round((totalScore / attempt.exam.totalMarks) * 1000) / 10
       : 0;
 
+  // Build attempt-level chronological grade history (from initial grades forward)
+  const runningByQuestion = new Map<string, number>();
+  let originalTotal = 0;
+  const subsequentGrades: Array<{
+    id: string;
+    attemptQuestionId: string;
+    questionPosition: number;
+    score: number;
+    reason: string | null;
+    rulingId: string | null;
+    createdAt: Date;
+  }> = [];
+
+  for (const aq of attempt.questions) {
+    if (aq.grades.length === 0) continue;
+    const earliest = aq.grades[aq.grades.length - 1];
+    runningByQuestion.set(aq.id, earliest.score);
+    originalTotal += earliest.score;
+
+    for (let i = 0; i < aq.grades.length - 1; i += 1) {
+      const g = aq.grades[i];
+      subsequentGrades.push({
+        id: g.id,
+        attemptQuestionId: aq.id,
+        questionPosition: aq.position,
+        score: g.score,
+        reason: g.reason,
+        rulingId: g.rulingId,
+        createdAt: g.createdAt,
+      });
+    }
+  }
+
+  subsequentGrades.sort(
+    (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+  );
+
+  let runningTotal = roundScore(originalTotal);
+  const scoreChangeEvents = subsequentGrades.map((g) => {
+    const prevQ = runningByQuestion.get(g.attemptQuestionId) ?? 0;
+    const delta = roundScore(g.score - prevQ);
+    const previousTotal = runningTotal;
+    const newTotal = roundScore(previousTotal + delta);
+    runningByQuestion.set(g.attemptQuestionId, g.score);
+    runningTotal = newTotal;
+
+    return {
+      id: g.id,
+      questionPosition: g.questionPosition,
+      previousTotal,
+      newTotal,
+      delta,
+      reason: g.reason,
+      rulingId: g.rulingId,
+      createdAt: g.createdAt.toISOString(),
+    };
+  });
+
   return {
     published: true as const,
     attemptId: attempt.id,
@@ -507,6 +603,17 @@ export async function getCandidateAttemptResult(attemptId: string) {
     totalScore,
     totalMarks: attempt.exam.totalMarks,
     percentage,
+    incidents: attempt.incidents.map((inc) => ({
+      id: inc.id,
+      type: inc.type,
+      detail: inc.detail,
+      at: inc.at.toISOString(),
+    })),
+    scoreChangeHistory: {
+      originalTotal: roundScore(originalTotal),
+      currentTotal: totalScore,
+      events: scoreChangeEvents,
+    },
     questions,
   };
 }

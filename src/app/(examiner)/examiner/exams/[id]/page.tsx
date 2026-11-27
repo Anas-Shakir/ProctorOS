@@ -4,6 +4,8 @@ import { getRoleHome } from "@/lib/session";
 import { getExamWorkspace } from "@/lib/exams";
 import { listQuestions } from "@/lib/questions";
 import { listExamEnrollments } from "@/lib/enrollments";
+import { listAuditLogs } from "@/lib/audit";
+import { getExaminerDisputesAndRulings } from "@/lib/disputes";
 import { getExamAnalytics } from "@/lib/analytics";
 import { getExamMonitorState } from "@/lib/monitor";
 import { getExaminerGradingAndResults } from "@/lib/results";
@@ -42,6 +44,8 @@ export default async function ExaminerExamWorkspacePage({
     monitorState,
     gradingSummary,
     analytics,
+    disputeState,
+    auditData,
   ] = await Promise.all([
     getExamWorkspace(id),
     listQuestions(user),
@@ -49,6 +53,8 @@ export default async function ExaminerExamWorkspacePage({
     getExamMonitorState(id),
     getExaminerGradingAndResults(id),
     getExamAnalytics(id),
+    getExaminerDisputesAndRulings(id),
+    listAuditLogs(30),
   ]);
 
   const serializedExam = {
@@ -121,6 +127,11 @@ export default async function ExaminerExamWorkspacePage({
           results: gradingSummary.results,
         }}
         initialAnalytics={analytics}
+        initialDisputes={disputeState.disputes}
+        initialRulings={disputeState.rulings}
+        initialQuestionTargets={disputeState.questionTargets}
+        initialAuditEntries={auditData.entries}
+        initialAuditHeadHash={auditData.headHash}
       />
     </PageShell>
   );
