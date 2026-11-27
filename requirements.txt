@@ -1,0 +1,34 @@
+# ProctorOS Pinned Dependency Manifest (kept in sync with package.json)
+# Authoritative Node/npm lockfile: package.json + package-lock.json (install via `npm ci`)
+#
+# Runtime & Toolchain:
+#   node==24.16.0
+#   npm==11.17.0
+#   database==PostgreSQL (Supabase, via Prisma)
+
+# --- Production Dependencies ---
+@prisma/client==6.19.3
+bcryptjs==3.0.3
+clsx==2.1.1
+jose==6.2.18
+lucide-react==1.82.0
+next==16.4.6
+papaparse==5.7.1
+prisma==6.19.3
+react==19.3.1
+react-dom==19.3.1
+tailwind-merge==3.7.1
+zod==4.6.7
+
+# --- Development Dependencies ---
+@tailwindcss/postcss==4.3.5
+@types/bcryptjs==2.4.6
+@types/node==26.6.11
+@types/papaparse==5.5.2
+@types/react==19.3.3
+@types/react-dom==19.3.0
+eslint==9.39.5
+eslint-config-next==16.4.6
+tailwindcss==4.3.5
+tsx==4.23.15
+typescript==6.0.3
