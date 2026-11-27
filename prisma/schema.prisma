@@ -1,0 +1,371 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  EXAMINER
+  CANDIDATE
+}
+
+enum ExamStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum QuestionType {
+  SINGLE
+  MULTI
+  WRITTEN
+}
+
+enum MultiMode {
+  PARTIAL_PENALTY
+  ALL_OR_NOTHING
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  AUTO_SUBMITTED
+  GRADED
+}
+
+enum IncidentType {
+  TAB_HIDDEN
+  BLUR
+  OFFLINE
+  PASTE
+  FULLSCREEN_EXIT
+}
+
+enum DisputeCategory {
+  GRADING_ERROR
+  AMBIGUOUS
+  TECHNICAL
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  UPHELD
+  REJECTED
+}
+
+enum RulingType {
+  ACCEPT_ALTERNATE
+  VOID_QUESTION
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(CANDIDATE)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  ownedExams       Exam[]           @relation("ExamOwner")
+  ownedQuestions   Question[]       @relation("QuestionOwner")
+  enrollments      Enrollment[]
+  attempts         Attempt[]
+  gradesGiven      Grade[]          @relation("Grader")
+  announcements    Announcement[]   @relation("AnnouncementAuthor")
+  userPref         UserPref?
+  disputesFiled    Dispute[]        @relation("DisputeCandidate")
+  disputesResolved Dispute[]        @relation("DisputeResolver")
+  rulingsCreated   QuestionRuling[] @relation("RulingCreator")
+  auditLogs        AuditLog[]       @relation("AuditActor")
+}
+
+model Exam {
+  id               String     @id @default(cuid())
+  ownerId          String
+  title            String
+  instructions     String     @default("")
+  startTime        DateTime
+  endTime          DateTime
+  durationMin      Int
+  totalMarks       Float
+  status           ExamStatus @default(DRAFT)
+  publishedAt      DateTime?
+  shuffleQuestions Boolean    @default(false)
+  shuffleOptions   Boolean    @default(false)
+  negativeMarking  Float      @default(0)
+  resultsPublished Boolean    @default(false)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  owner         User             @relation("ExamOwner", fields: [ownerId], references: [id])
+  examQuestions ExamQuestion[]
+  enrollments   Enrollment[]
+  attempts      Attempt[]
+  announcements Announcement[]
+  rulings       QuestionRuling[]
+
+  @@index([ownerId])
+  @@index([status, startTime, endTime])
+}
+
+model Question {
+  id         String       @id @default(cuid())
+  ownerId    String
+  topic      String
+  difficulty Difficulty   @default(MEDIUM)
+  type       QuestionType
+  text       String
+  marks      Float
+  multiMode  MultiMode    @default(PARTIAL_PENALTY)
+  version    Int          @default(1)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  owner         User           @relation("QuestionOwner", fields: [ownerId], references: [id])
+  options       Option[]
+  examQuestions ExamQuestion[]
+
+  @@index([ownerId, topic, difficulty])
+}
+
+model Option {
+  id         String  @id @default(cuid())
+  questionId String
+  text       String
+  isCorrect  Boolean @default(false)
+  order      Int     @default(0)
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+}
+
+model ExamQuestion {
+  id            String @id @default(cuid())
+  examId        String
+  questionId    String
+  order         Int
+  marksOverride Float?
+
+  exam     Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id])
+
+  @@unique([examId, questionId])
+  @@index([examId, order])
+}
+
+model Enrollment {
+  id          String   @id @default(cuid())
+  examId      String
+  candidateId String
+  createdAt   DateTime @default(now())
+
+  exam      Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+  candidate User @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@unique([examId, candidateId])
+  @@index([candidateId])
+}
+
+model Attempt {
+  id          String        @id @default(cuid())
+  examId      String
+  candidateId String
+  isSandbox   Boolean       @default(false)
+  realKey     String?       @unique
+  status      AttemptStatus @default(IN_PROGRESS)
+  startedAt   DateTime      @default(now())
+  deadlineAt  DateTime
+  submittedAt DateTime?
+  totalScore  Float?
+
+  exam         Exam              @relation(fields: [examId], references: [id], onDelete: Cascade)
+  candidate    User              @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  questions    AttemptQuestion[]
+  incidents    Incident[]
+  scratchpad   Scratchpad?
+  reportTokens ReportToken[]
+
+  @@index([examId, isSandbox, status])
+  @@index([candidateId, isSandbox])
+}
+
+model AttemptQuestion {
+  id                String       @id @default(cuid())
+  attemptId         String
+  position          Int
+  sourceQuestionId  String
+  textSnapshot      String
+  typeSnapshot      QuestionType
+  marksSnapshot     Float
+  optionsSnapshot   Json?
+  multiModeSnapshot MultiMode    @default(PARTIAL_PENALTY)
+
+  attempt  Attempt   @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  answer   Answer?
+  grades   Grade[]
+  disputes Dispute[]
+
+  @@unique([attemptId, position])
+  @@index([attemptId])
+  @@index([sourceQuestionId])
+}
+
+model Answer {
+  id                String   @id @default(cuid())
+  attemptQuestionId String   @unique
+  selectedOptionIds Json     @default("[]")
+  writtenText       String?
+  markedForReview   Boolean  @default(false)
+  revision          Int      @default(0)
+  savedAt           DateTime @default(now())
+
+  attemptQuestion AttemptQuestion @relation(fields: [attemptQuestionId], references: [id], onDelete: Cascade)
+}
+
+model Grade {
+  id                String   @id @default(cuid())
+  attemptQuestionId String
+  score             Float
+  gradedBy          String?
+  rulingId          String?
+  reason            String?
+  createdAt         DateTime @default(now())
+
+  attemptQuestion AttemptQuestion @relation(fields: [attemptQuestionId], references: [id], onDelete: Cascade)
+  grader          User?           @relation("Grader", fields: [gradedBy], references: [id])
+  ruling          QuestionRuling? @relation(fields: [rulingId], references: [id])
+
+  @@index([attemptQuestionId, createdAt])
+}
+
+model Incident {
+  id        String       @id @default(cuid())
+  attemptId String
+  type      IncidentType
+  at        DateTime     @default(now())
+  detail    String?
+
+  attempt Attempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@index([attemptId, at])
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  examId    String
+  authorId  String
+  message   String
+  createdAt DateTime @default(now())
+
+  exam   Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+  author User @relation("AnnouncementAuthor", fields: [authorId], references: [id])
+
+  @@index([examId, createdAt])
+}
+
+model UserPref {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  prefs     Json     @default("{}")
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Scratchpad {
+  id        String   @id @default(cuid())
+  attemptId String   @unique
+  content   String   @default("")
+  updatedAt DateTime @updatedAt
+
+  attempt Attempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+}
+
+model Dispute {
+  id                String          @id @default(cuid())
+  attemptQuestionId String
+  candidateId       String
+  category          DisputeCategory
+  message           String
+  status            DisputeStatus   @default(OPEN)
+  resolution        String?
+  resolvedBy        String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  attemptQuestion AttemptQuestion @relation(fields: [attemptQuestionId], references: [id], onDelete: Cascade)
+  candidate       User            @relation("DisputeCandidate", fields: [candidateId], references: [id])
+  resolver        User?           @relation("DisputeResolver", fields: [resolvedBy], references: [id])
+
+  @@index([attemptQuestionId])
+  @@index([candidateId])
+  @@index([status])
+}
+
+model QuestionRuling {
+  id               String     @id @default(cuid())
+  examId           String
+  sourceQuestionId String
+  type             RulingType
+  detail           Json       @default("{}")
+  reason           String
+  createdBy        String
+  createdAt        DateTime   @default(now())
+
+  exam    Exam    @relation(fields: [examId], references: [id], onDelete: Cascade)
+  creator User    @relation("RulingCreator", fields: [createdBy], references: [id])
+  grades  Grade[]
+
+  @@index([examId, sourceQuestionId])
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  actorId   String?
+  action    String
+  entity    String
+  entityId  String
+  payload   Json
+  prevHash  String
+  hash      String
+  createdAt DateTime @default(now())
+
+  actor User? @relation("AuditActor", fields: [actorId], references: [id])
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+model AuditHead {
+  id        Int      @id @default(1)
+  lastHash  String
+  lastId    Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+model ReportToken {
+  id           String   @id
+  attemptId    String
+  scoreAtIssue Float
+  issuedAt     DateTime @default(now())
+  signature    String
+  supersededBy String?
+
+  attempt Attempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@index([attemptId])
+}
