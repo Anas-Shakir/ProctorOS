@@ -9,6 +9,7 @@ import {
   ArrowLeft,
   ArrowUp,
   CheckCircle2,
+  Eye,
   Lock,
   Plus,
   Send,
@@ -153,6 +154,7 @@ export function ExamWorkspace({
   // Publish modal
   const [publishOpen, setPublishOpen] = React.useState(false);
   const [publishing, setPublishing] = React.useState(false);
+  const [launchingSandbox, setLaunchingSandbox] = React.useState(false);
 
   // Question picker modal
   const [pickerOpen, setPickerOpen] = React.useState(false);
@@ -322,6 +324,28 @@ export function ExamWorkspace({
     }
   };
 
+  const handleLaunchSandbox = async () => {
+    setLaunchingSandbox(true);
+    try {
+      const res = await fetch(`/api/examiner/exams/${exam.id}/sandbox`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.warning(
+          "Preview unavailable",
+          data.error ?? "Could not launch sandbox",
+        );
+        setLaunchingSandbox(false);
+        return;
+      }
+      router.push(`/candidate/attempts/${data.attempt.id}`);
+    } catch {
+      toast.warning("Network error", "Could not start sandbox preview.");
+      setLaunchingSandbox(false);
+    }
+  };
+
   const marksMatched =
     exam.examQuestions.length > 0 &&
     Math.abs(exam.assignedMarks - exam.totalMarks) < 0.001;
@@ -390,7 +414,16 @@ export function ExamWorkspace({
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="secondary"
+            loading={launchingSandbox}
+            loadingLabel="Opening..."
+            onClick={() => void handleLaunchSandbox()}
+          >
+            <Eye className="h-4 w-4" aria-hidden="true" />
+            <span>Preview as Candidate</span>
+          </Button>
           {!isPublished && (
             <Button
               variant="primary"

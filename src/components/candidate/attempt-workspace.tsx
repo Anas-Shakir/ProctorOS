@@ -14,10 +14,16 @@ import {
   LayoutGrid,
   Megaphone,
   NotebookPen,
+  RotateCcw,
   Send,
   ShieldCheck,
+  SlidersHorizontal,
   X,
 } from "lucide-react";
+import {
+  DEFAULT_WORKSPACE_PREFS,
+  type WorkspacePrefs,
+} from "@/lib/validators/prefs";
 import {
   Badge,
   Button,
@@ -84,8 +90,10 @@ function isQuestionAnswered(ans: LocalAnswerState | undefined): boolean {
 
 export function AttemptWorkspace({
   initialPaper,
+  initialPrefs = DEFAULT_WORKSPACE_PREFS,
 }: {
   initialPaper: InitialPaperPayload;
+  initialPrefs?: WorkspacePrefs;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -95,6 +103,10 @@ export function AttemptWorkspace({
     initialPaper.attempt.submittedAt,
   );
   const isActive = status === "IN_PROGRESS";
+
+  const [prefs, setPrefs] = React.useState<WorkspacePrefs>(initialPrefs);
+  const [prefsOpen, setPrefsOpen] = React.useState(false);
+  const [restartingSandbox, setRestartingSandbox] = React.useState(false);
 
   const [currentIndex, setCurrentIndex] = React.useState(0);
   const [answers, setAnswers] = React.useState<Record<string, LocalAnswerState>>(
@@ -388,24 +400,102 @@ export function AttemptWorkspace({
     );
   };
 
+  const updateWorkspacePrefs = async (patch: Partial<WorkspacePrefs>) => {
+    const next: WorkspacePrefs = { ...prefs, ...patch };
+    setPrefs(next);
+    try {
+      window.localStorage.setItem("proctoros_prefs", JSON.stringify(next));
+    } catch {
+      // Ignore storage errors
+    }
+    try {
+      await fetch("/api/user/prefs", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(next),
+      });
+    } catch {
+      // Non-blocking preference sync
+    }
+  };
+
+  const handleRestartSandbox = async () => {
+    if (!initialPaper.attempt.isSandbox) return;
+    setRestartingSandbox(true);
+    try {
+      clearOutbox();
+      await fetch(
+        `/api/examiner/exams/${initialPaper.attempt.examId}/sandbox`,
+        { method: "DELETE" },
+      );
+      const res = await fetch(
+        `/api/examiner/exams/${initialPaper.attempt.examId}/sandbox`,
+        { method: "POST" },
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        toast.warning("Restart failed", data.error ?? "Could not restart sandbox");
+        setRestartingSandbox(false);
+        return;
+      }
+      router.push(`/candidate/attempts/${data.attempt.id}`);
+      router.refresh();
+    } catch {
+      toast.warning("Network error", "Could not restart sandbox attempt.");
+      setRestartingSandbox(false);
+    }
+  };
+
+  const themeVars: React.CSSProperties | undefined =
+    prefs.theme === "dark"
+      ? ({
+          "--bg-canvas": "#161B18",
+          "--bg-surface": "#1F2621",
+          "--bg-subtle": "#27302A",
+          "--border-default": "#333D36",
+          "--border-strong": "#46534A",
+          "--ink-primary": "#EEF2EE",
+          "--ink-secondary": "#A6B2AA",
+          "--accent-primary-tint": "#233627",
+          "--accent-secondary-tint": "#3D241C",
+        } as React.CSSProperties)
+      : undefined;
+
+  const promptSizeClass =
+    prefs.fontSize === "sm"
+      ? "text-sm leading-relaxed"
+      : prefs.fontSize === "lg"
+        ? "text-lg sm:text-[19px] leading-[1.7]"
+        : "text-base sm:text-[17px] leading-[1.65]";
+
   // Submission Receipt View
   if (!isActive) {
     return (
-      <div className="min-h-screen bg-canvas text-ink px-6 py-16">
+      <div
+        style={themeVars}
+        className="min-h-screen bg-canvas text-ink px-6 py-16"
+      >
         <div className="mx-auto max-w-xl">
           <Card className="stagger-in">
             <CardHeader>
               <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-pine-tint text-pine mb-3">
                 <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
               </div>
-              <Badge variant="pine">{status}</Badge>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="pine">{status}</Badge>
+                {initialPaper.attempt.isSandbox && (
+                  <Badge variant="terracotta">Sandbox Preview</Badge>
+                )}
+              </div>
               <CardTitle className="mt-4 font-serif text-2xl font-medium">
                 {initialPaper.attempt.examTitle}
               </CardTitle>
               <CardDescription>
-                {status === "AUTO_SUBMITTED"
-                  ? "The exam deadline expired and your previously saved answers were automatically submitted."
-                  : "Your attempt has been submitted cleanly. Results will appear on your dashboard once published by the examiner."}
+                {initialPaper.attempt.isSandbox
+                  ? "Sandbox mode. Nothing is saved to real results."
+                  : status === "AUTO_SUBMITTED"
+                    ? "The exam deadline expired and your previously saved answers were automatically submitted."
+                    : "Your attempt has been submitted cleanly. Results will appear on your dashboard once published by the examiner."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -426,22 +516,43 @@ export function AttemptWorkspace({
                 )}
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
-                <Link
-                  href="/candidate"
-                  className="pressable focus-ring inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-border-default bg-surface text-ink text-sm font-medium hover:border-border-strong"
-                >
-                  <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-                  <span>Dashboard</span>
-                </Link>
-                <Link
-                  href={`/candidate/attempts/${initialPaper.attempt.id}/results`}
-                  className="pressable focus-ring inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-pine text-white text-sm font-medium hover:bg-pine-hover"
-                >
-                  <span>View Results</span>
-                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                </Link>
-              </div>
+              {initialPaper.attempt.isSandbox ? (
+                <div className="flex flex-wrap items-center gap-3">
+                  <Link
+                    href={`/examiner/exams/${initialPaper.attempt.examId}`}
+                    className="pressable focus-ring inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-border-default bg-surface text-ink text-sm font-medium hover:border-border-strong"
+                  >
+                    <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                    <span>Back to Examiner Workspace</span>
+                  </Link>
+                  <Button
+                    variant="primary"
+                    loading={restartingSandbox}
+                    loadingLabel="Restarting..."
+                    onClick={() => void handleRestartSandbox()}
+                  >
+                    <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                    <span>Reset &amp; Restart Sandbox</span>
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center gap-3">
+                  <Link
+                    href="/candidate"
+                    className="pressable focus-ring inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-border-default bg-surface text-ink text-sm font-medium hover:border-border-strong"
+                  >
+                    <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                    <span>Dashboard</span>
+                  </Link>
+                  <Link
+                    href={`/candidate/attempts/${initialPaper.attempt.id}/results`}
+                    className="pressable focus-ring inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-pine text-white text-sm font-medium hover:bg-pine-hover"
+                  >
+                    <span>View Results</span>
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </Link>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -467,10 +578,29 @@ export function AttemptWorkspace({
   const isWarning = remainingMs > 60_000 && remainingMs <= 5 * 60_000;
 
   return (
-    <div className="min-h-screen flex flex-col bg-canvas text-ink">
+    <div
+      style={themeVars}
+      className="min-h-screen flex flex-col bg-canvas text-ink"
+    >
       {initialPaper.attempt.isSandbox && (
-        <div className="bg-terracotta-tint border-b border-terracotta/25 px-6 py-2 text-center text-xs font-medium text-terracotta">
-          Sandbox mode. Nothing is saved to real results.
+        <div className="bg-terracotta-tint border-b border-terracotta/25 px-4 sm:px-8 py-2 flex flex-wrap items-center justify-between gap-3 text-xs font-medium text-terracotta">
+          <span>Sandbox mode. Nothing is saved to real results.</span>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              disabled={restartingSandbox}
+              onClick={() => void handleRestartSandbox()}
+              className="underline hover:opacity-80 cursor-pointer disabled:opacity-50"
+            >
+              {restartingSandbox ? "Restarting..." : "Reset & Restart"}
+            </button>
+            <Link
+              href={`/examiner/exams/${initialPaper.attempt.examId}`}
+              className="underline hover:opacity-80"
+            >
+              Exit Preview
+            </Link>
+          </div>
         </div>
       )}
 
@@ -533,6 +663,16 @@ export function AttemptWorkspace({
             >
               <NotebookPen className="h-4 w-4" aria-hidden="true" />
               <span className="hidden sm:inline">Scratchpad</span>
+            </Button>
+
+            <Button
+              variant="secondary"
+              size="sm"
+              aria-label="Display preferences"
+              onClick={() => setPrefsOpen(true)}
+            >
+              <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+              <span className="hidden md:inline">Display</span>
             </Button>
 
             <Button
@@ -629,7 +769,12 @@ export function AttemptWorkspace({
                   </CardHeader>
 
                   <CardContent className="pt-7 space-y-7">
-                    <p className="text-base sm:text-[17px] text-ink leading-[1.65] whitespace-pre-wrap">
+                    <p
+                      className={cn(
+                        "text-ink whitespace-pre-wrap",
+                        promptSizeClass,
+                      )}
+                    >
                       {currentQuestion.text}
                     </p>
 
@@ -799,10 +944,11 @@ export function AttemptWorkspace({
               )}
             </div>
 
-            {/* Right Sidebar: Question Navigator + Optional Scratchpad */}
+            {/* Sidebar: Question Navigator + Optional Scratchpad */}
             <aside
               className={cn(
                 "lg:col-span-4 space-y-6",
+                prefs.navigatorSide === "left" ? "lg:order-first" : "lg:order-last",
                 mobileNavOpen ? "block" : "hidden lg:block",
               )}
             >
@@ -1010,6 +1156,91 @@ export function AttemptWorkspace({
             ))}
           </div>
         )}
+      </Modal>
+
+      {/* Workspace Display Preferences Modal */}
+      <Modal
+        open={prefsOpen}
+        onClose={() => setPrefsOpen(false)}
+        title="Workspace Display"
+        description="Customize reading size, theme, and navigator position. Saved to your profile."
+        footer={
+          <Button variant="primary" onClick={() => setPrefsOpen(false)}>
+            Done
+          </Button>
+        }
+      >
+        <div className="space-y-5">
+          <div className="space-y-2">
+            <p className="text-xs font-medium uppercase tracking-[0.04em] text-ink-muted">
+              Reading Font Size
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {(["sm", "md", "lg"] as const).map((sz) => (
+                <Button
+                  key={sz}
+                  variant={prefs.fontSize === sz ? "primary" : "secondary"}
+                  size="sm"
+                  onClick={() => void updateWorkspacePrefs({ fontSize: sz })}
+                >
+                  {sz === "sm" ? "Compact" : sz === "md" ? "Standard" : "Large"}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-xs font-medium uppercase tracking-[0.04em] text-ink-muted">
+              Theme
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant={prefs.theme === "paper" ? "primary" : "secondary"}
+                size="sm"
+                onClick={() => void updateWorkspacePrefs({ theme: "paper" })}
+              >
+                Warm Paper
+              </Button>
+              <Button
+                variant={prefs.theme === "dark" ? "primary" : "secondary"}
+                size="sm"
+                onClick={() => void updateWorkspacePrefs({ theme: "dark" })}
+              >
+                Dark Slate
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-xs font-medium uppercase tracking-[0.04em] text-ink-muted">
+              Navigator Position
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant={
+                  prefs.navigatorSide === "left" ? "primary" : "secondary"
+                }
+                size="sm"
+                onClick={() =>
+                  void updateWorkspacePrefs({ navigatorSide: "left" })
+                }
+              >
+                Left Sidebar
+              </Button>
+              <Button
+                variant={
+                  prefs.navigatorSide === "right" ? "primary" : "secondary"
+                }
+                size="sm"
+                onClick={() =>
+                  void updateWorkspacePrefs({ navigatorSide: "right" })
+                }
+              >
+                Right Sidebar
+              </Button>
+            </div>
+          </div>
+        </div>
       </Modal>
     </div>
   );

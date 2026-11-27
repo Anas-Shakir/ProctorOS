@@ -26,6 +26,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Examiners/Admins may open /candidate/attempts/[id] for their own Sandbox preview;
+  // page-level requireAttemptOwner enforces ownership strictly.
+  if (
+    pathname.startsWith("/candidate/attempts/") &&
+    !pathname.endsWith("/results")
+  ) {
+    if (!session) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("next", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+    return NextResponse.next();
+  }
+
   for (const rule of PROTECTED_PREFIXES) {
     if (pathname === rule.prefix || pathname.startsWith(`${rule.prefix}/`)) {
       if (!session) {
